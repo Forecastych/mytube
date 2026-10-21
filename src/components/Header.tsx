@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { Moon, Search, Sun } from "lucide-react";
-import { useTheme } from "../lib/theme";
+import { usePref } from "../lib/prefs";
 import "./Header.css";
 
 export function Header() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const { theme, toggle } = useTheme();
+  const [theme, setTheme] = usePref("theme");
 
   // search.list costs 100 units: search on submit only, never per keystroke.
   function submit(e: FormEvent) {
@@ -27,7 +27,7 @@ export function Header() {
           spellCheck={false}
         />
       </form>
-      <button className="icon-btn glass" onClick={toggle} title="Toggle theme">
+      <button className="icon-btn glass" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} title="Toggle theme">
         {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
       </button>
     </header>
