@@ -11,6 +11,7 @@ const Home = lazy(() => import("./pages/Home"));
 const Favorites = lazy(() => import("./pages/Favorites"));
 const Watch = lazy(() => import("./pages/Watch"));
 const Algorithm = lazy(() => import("./pages/Algorithm"));
+const Settings = lazy(() => import("./pages/Settings"));
 
 export default function App() {
   return (
@@ -28,7 +29,7 @@ export default function App() {
                 <Route path="/trending" element={<Placeholder title="Trending" note="By region and category." />} />
                 <Route path="/search" element={<Placeholder title="Search" note="Press Enter in the search bar." />} />
                 <Route path="/algorithm" element={<Algorithm />} />
-                <Route path="/settings" element={<Placeholder title="Settings" note="Account, appearance, network." />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/watch/:id" element={<Watch />} />
               </Routes>
             </Suspense>

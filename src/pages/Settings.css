@@ -1,0 +1,171 @@
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+}
+.settings-head h1 {
+  margin: 0;
+  font-size: 28px;
+}
+.settings-head p {
+  margin: 2px 0 6px;
+}
+
+.settings-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.settings-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.settings-card-head > svg {
+  flex: none;
+  margin-top: 1px;
+}
+.settings-card h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.settings-card-head p {
+  margin: 2px 0 0;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 48px;
+  padding: 6px 0;
+}
+.settings-row + .settings-row {
+  border-top: 1px solid var(--border);
+}
+.settings-row.disabled .settings-row-text {
+  opacity: 0.5;
+}
+.settings-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.settings-value {
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.settings-row-control {
+  display: flex;
+  flex: none;
+}
+.settings-row input[type="range"] {
+  width: 220px;
+  accent-color: var(--accent-2);
+}
+.settings-row select {
+  min-width: 160px;
+  cursor: pointer;
+}
+
+.segmented {
+  display: flex;
+  padding: 3px;
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+}
+.segmented button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 500;
+  cursor: pointer;
+}
+.segmented button.active {
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  color: #fff;
+}
+
+/* A busy backdrop so blur and opacity are visible while dragging. */
+.glass-demo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 110px;
+  margin: 6px 0;
+  overflow: hidden;
+  border-radius: var(--radius-thumb);
+}
+.glass-demo-art {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 30%, #ff9f43 0 18%, transparent 19%),
+    radial-gradient(circle at 70% 60%, #3b9eff 0 22%, transparent 23%),
+    radial-gradient(circle at 45% 80%, #3ddc84 0 12%, transparent 13%),
+    repeating-linear-gradient(45deg, #5b3df5 0 12px, #7c5cff 12px 24px);
+}
+.glass-demo-chip {
+  position: relative;
+  padding: 14px 28px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.settings-cats {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0 4px 2px;
+}
+.settings-cats.disabled {
+  opacity: 0.5;
+}
+.settings-cat {
+  display: grid;
+  grid-template-columns: 22px 170px minmax(0, 1fr);
+  align-items: center;
+  min-height: 32px;
+  cursor: pointer;
+}
+.settings-cat input {
+  margin: 0;
+  accent-color: var(--accent-2);
+  cursor: inherit;
+}
+.settings-cats.disabled .settings-cat {
+  cursor: default;
+}
+.settings-cats > .small:first-child {
+  margin-bottom: 4px;
+}
+.settings-cats > .small:last-child {
+  margin-top: 4px;
+}
+
+.settings-later {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.7;
+}
