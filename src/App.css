@@ -1,0 +1,25 @@
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-areas: "sidebar content";
+  height: 100%;
+}
+
+.content {
+  grid-area: content;
+  overflow-y: auto;
+  position: relative;
+}
+
+.page {
+  padding: 8px 40px 40px;
+}
+
+@media (max-width: 1100px) {
+  .shell {
+    --sidebar-w: 72px;
+  }
+  .page {
+    padding: 8px 24px 32px;
+  }
+}

@@ -1,0 +1,72 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/*
+ * Liquid glass. Use on overlays only (sidebar, header, chips, menus, player
+ * controls) — never on video cards.
+ */
+.glass {
+  background: rgb(var(--glass-tint) / var(--glass-alpha));
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 0 0 1px rgb(255 255 255 / 0.06),
+    var(--glass-shadow);
+}
+
+/* Edge refraction via the SVG filter from <GlassFilter/>. Chromium only — fine in WebView2. */
+.glass-refract {
+  backdrop-filter: url(#glass) blur(var(--glass-blur)) saturate(160%);
+}
+
+:root[data-reduce-transparency="true"] .glass,
+:root[data-reduce-transparency="true"] .glass-refract {
+  backdrop-filter: none;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

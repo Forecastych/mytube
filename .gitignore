@@ -1,0 +1,30 @@
+# secrets — never commit
+.env
+.env.*
+client_secret*.json
+credentials*.json
+*.token
+
+# local data
+*.db
+*.sqlite
+
+# build
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
+
+# misc
+.claude/checkpoints/
+.claude/settings.local.json
+.DS_Store
+Thumbs.db
+
+# node / editor
+dist-ssr/
+*.local
+*.log
+.vscode/*
+!.vscode/extensions.json
+.idea/

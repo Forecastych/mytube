@@ -1,0 +1,55 @@
+/* The only place where colors live. Components read variables, never hex. */
+
+:root {
+  --bg: #0b0b12;
+  --surface: #12121c;
+  --surface-2: #1a1a26;
+  --border: #23233a;
+  --text: #ececf4;
+  --muted: #8d8da6;
+  --accent: #5b3df5;
+  --accent-2: #7c5cff;
+  --up: #3ddc84;
+
+  --radius-card: 10px;
+  --radius-thumb: 8px;
+  --radius-pill: 999px;
+
+  --font: "Inter", "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+
+  /* Glass. Settings → Appearance writes --glass-alpha and --glass-blur. */
+  --glass-alpha: 0.55;
+  --glass-blur: 18px;
+  --glass-tint: 18 18 28; /* rgb of --surface, for rgb(... / alpha) */
+  --glass-highlight: rgb(255 255 255 / 0.14);
+  --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
+
+  --sidebar-w: 220px;
+  --header-h: 64px;
+
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f4f8;
+  --surface: #ffffff;
+  --surface-2: #ececf3;
+  --border: #dcdce8;
+  --text: #15151f;
+  --muted: #62627a;
+  --accent: #5b3df5;
+  --accent-2: #7c5cff;
+  --up: #12a150;
+
+  --glass-tint: 255 255 255;
+  --glass-highlight: rgb(255 255 255 / 0.7);
+  --glass-shadow: 0 8px 32px rgb(20 20 40 / 0.12);
+
+  color-scheme: light;
+}
+
+/* "Reduce transparency": solid fill, no blur. */
+:root[data-reduce-transparency="true"] {
+  --glass-alpha: 1;
+  --glass-blur: 0px;
+}
