@@ -1,0 +1,16 @@
+.add-channel {
+  max-width: 560px;
+}
+.add-channel-row {
+  display: flex;
+  gap: 10px;
+}
+.add-channel .field {
+  flex: 1;
+  min-width: 0;
+}
+.form-error {
+  margin-top: 8px;
+  color: #ff6b81;
+  font-size: 13px;
+}

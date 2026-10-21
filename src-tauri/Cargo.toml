@@ -21,6 +21,12 @@ tauri = { version = "2", features = [] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2", "gzip"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
+quick-xml = "0.42"
+tokio = { version = "1", features = ["sync", "time"] }
+thiserror = "2"
+time = { version = "0.3", features = ["parsing"] }
 
 
 # Read the optimization guideline for more details: https://tauri.app/concept/size/#cargo-configuration
@@ -30,3 +36,6 @@ lto = true
 opt-level = 3
 panic = "abort"
 strip = true
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }

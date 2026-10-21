@@ -1,0 +1,50 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+.home > section + section {
+  border-top: 1px solid var(--border);
+  padding-top: 22px;
+}
+
+.home-empty {
+  max-width: 640px;
+  margin: 12vh auto 0;
+  text-align: center;
+}
+.home-empty h1 {
+  font-size: 28px;
+  margin: 0 0 8px;
+}
+.home-empty p {
+  color: var(--muted);
+  margin: 0 0 22px;
+}
+.home-empty .add-channel {
+  margin: 0 auto;
+}
+
+.strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, calc((100% - 5 * 18px) / 6));
+  gap: 18px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 0 3px rgb(124 92 255 / 0.25);
+}
+
+.chips {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
