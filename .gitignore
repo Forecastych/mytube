@@ -16,8 +16,7 @@ src-tauri/target/
 src-tauri/gen/
 
 # misc
-.claude/checkpoints/
-.claude/settings.local.json
+.claude/
 .DS_Store
 Thumbs.db
 
