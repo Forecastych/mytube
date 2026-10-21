@@ -1,0 +1,340 @@
+/* The video is always dark, so the controls keep dark glass in the light theme too. */
+.player {
+  --glass-tint: 18 18 28;
+  --glass-highlight: rgb(255 255 255 / 0.14);
+  position: relative;
+  aspect-ratio: 16 / 9;
+  max-height: calc(100vh - var(--header-h) - 120px);
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #000;
+  color: #fff;
+  user-select: none;
+}
+.player video,
+.player-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+.player-poster {
+  object-fit: cover;
+  filter: brightness(0.45);
+}
+
+/* Window fullscreen (Tauri) + the element fills it. */
+.player.fs {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  max-height: none;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+
+.player-hit {
+  position: absolute;
+  inset: 0;
+}
+
+.player-center,
+.player-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  pointer-events: none;
+}
+.player-overlay {
+  padding: 24px;
+  background: rgb(0 0 0 / 0.6);
+  text-align: center;
+  pointer-events: auto;
+}
+.player-overlay p {
+  max-width: 560px;
+  margin: 0;
+  line-height: 1.5;
+}
+.player-overlay-actions {
+  display: flex;
+  gap: 12px;
+}
+.player-overlay .btn {
+  background: rgb(255 255 255 / 0.1);
+  border-color: rgb(255 255 255 / 0.2);
+  color: #fff;
+}
+
+.player-toast {
+  position: absolute;
+  left: 16px;
+  bottom: 96px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 14px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+}
+.player-notice {
+  top: 16px;
+  bottom: auto;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.player-toast button {
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+/* ---- bottom bar ---- */
+
+.player-bar {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  padding: 4px 10px 6px;
+  border-radius: 14px;
+  transition:
+    opacity 0.25s,
+    transform 0.25s;
+}
+.player-bar.hidden {
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+.player-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 40px;
+}
+.player-row .spacer {
+  flex: 1;
+}
+
+.pbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+}
+.pbtn:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+.pbtn.pill {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.volume {
+  display: flex;
+  align-items: center;
+}
+.volume input {
+  width: 0;
+  opacity: 0;
+  accent-color: #fff;
+  transition:
+    width 0.2s,
+    opacity 0.2s;
+}
+.volume:hover input,
+.volume input:focus-visible {
+  width: 80px;
+  opacity: 1;
+  margin-right: 6px;
+}
+
+.player-time {
+  margin-left: 6px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.player-chapter {
+  overflow: hidden;
+  font-size: 13px;
+  color: rgb(255 255 255 / 0.75);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- seek bar ---- */
+
+.seek {
+  position: relative;
+  height: 16px;
+  cursor: pointer;
+  touch-action: none;
+}
+.seek-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 6px;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: rgb(255 255 255 / 0.2);
+  transition:
+    top 0.12s,
+    height 0.12s;
+}
+.seek:hover .seek-track {
+  top: 5px;
+  height: 6px;
+}
+.seek-track > div {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.seek-buffered {
+  left: 0;
+  background: rgb(255 255 255 / 0.35);
+}
+.seek-sponsor {
+  background: #00d400;
+  opacity: 0.8;
+}
+.seek-chapter {
+  width: 3px;
+  margin-left: -1px;
+  background: rgb(0 0 0 / 0.7);
+  z-index: 1;
+}
+.seek-played {
+  left: 0;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.seek-thumb {
+  position: absolute;
+  top: 3px;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  border-radius: 50%;
+  background: #fff;
+  transform: scale(0);
+  transition: transform 0.12s;
+  pointer-events: none;
+}
+.seek:hover .seek-thumb {
+  transform: scale(1.2);
+}
+.seek-tip {
+  position: absolute;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.seek-tip span {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: rgb(255 255 255 / 0.8);
+}
+
+/* ---- quality / speed menu ---- */
+
+.menu-anchor {
+  position: relative;
+}
+.player-menu {
+  position: absolute;
+  right: 0;
+  bottom: 44px;
+  min-width: 200px;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 12px;
+}
+.player-menu > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.player-menu > button:hover {
+  background: rgb(255 255 255 / 0.12);
+}
+.player-menu .muted {
+  margin-left: auto;
+  color: rgb(255 255 255 / 0.55);
+}
+.menu-gap {
+  width: 14px;
+}
+.menu-title {
+  padding: 8px 10px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.55);
+}
+.menu-note {
+  padding: 4px 10px;
+}
+.menu-rates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 2px 6px 6px;
+}
+.menu-rates button {
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 0.08);
+  color: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+.menu-rates button.active {
+  background: var(--accent);
+}

@@ -9,6 +9,7 @@ import "./App.css";
 // Screens load on first visit: keeps the startup bundle small.
 const Home = lazy(() => import("./pages/Home"));
 const Favorites = lazy(() => import("./pages/Favorites"));
+const Watch = lazy(() => import("./pages/Watch"));
 
 export default function App() {
   return (
@@ -27,7 +28,7 @@ export default function App() {
                 <Route path="/search" element={<Placeholder title="Search" note="Press Enter in the search bar." />} />
                 <Route path="/algorithm" element={<Placeholder title="Algorithm" note="Blocked topics, words, channels; feed mix." />} />
                 <Route path="/settings" element={<Placeholder title="Settings" note="Account, appearance, network." />} />
-                <Route path="/watch/:id" element={<Placeholder title="Watch" note="Player, description, comments." />} />
+                <Route path="/watch/:id" element={<Watch />} />
               </Routes>
             </Suspense>
           </div>

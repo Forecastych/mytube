@@ -55,6 +55,18 @@ export async function removeFavorite(id: string) {
   });
 }
 
+/** Drop the NEW mark locally; the DB is updated by `api.markWatched`. */
+export function markWatchedLocal(videoId: string) {
+  const v = state.videos.find((x) => x.id === videoId);
+  if (!v?.isNew) return;
+  set({
+    videos: state.videos.map((x) => (x.id === videoId ? { ...x, isNew: false } : x)),
+    channels: state.channels.map((c) =>
+      c.id === v.channelId ? { ...c, newCount: Math.max(0, c.newCount - 1) } : c,
+    ),
+  });
+}
+
 export function useFavorites() {
   const s = useSyncExternalStore(subscribe, () => state);
   useEffect(() => {

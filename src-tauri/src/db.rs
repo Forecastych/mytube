@@ -168,3 +168,12 @@ pub fn favorites_feed(conn: &Connection, now: i64, limit: u32) -> Result<Vec<Vid
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
 }
+
+pub fn mark_watched(conn: &Connection, video_id: &str, now: i64) -> Result<()> {
+    conn.execute(
+        "INSERT INTO watched (video_id, watched_at) VALUES (?1, ?2)
+         ON CONFLICT(video_id) DO UPDATE SET watched_at = excluded.watched_at",
+        params![video_id, now],
+    )?;
+    Ok(())
+}

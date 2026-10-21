@@ -4,6 +4,15 @@ const rel = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
 export const views = (n: number | null) => (n == null ? "" : `${compact.format(n)} views`);
 
+/** 75 → "1:15", 3725 → "1:02:05". */
+export function clock(sec: number): string {
+  const s = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${String(m).padStart(2, "0")}:${ss}` : `${m}:${ss}`;
+}
+
 const steps: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 31536000],
   ["month", 2592000],

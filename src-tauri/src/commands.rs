@@ -8,11 +8,13 @@ use tokio::sync::Semaphore;
 
 use crate::db::{self, Channel, Video};
 use crate::error::{Error, Result};
+use crate::player::{self, sidx, sponsorblock, Player, WatchInfo};
 use crate::youtube::{channel, rss};
 
 pub struct AppState {
     pub db: Mutex<Connection>,
     pub http: reqwest::Client,
+    pub player: Player,
 }
 
 /// RSS is cached by YouTube for 15 min anyway; refetching sooner is wasted traffic.
@@ -101,4 +103,49 @@ pub async fn favorites_feed(state: State<'_, AppState>, force: bool) -> Result<F
 
     let videos = db::favorites_feed(&*lock(&state)?, t, FEED_LIMIT)?;
     Ok(FavoritesFeed { videos, failed })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Watch {
+    #[serde(flatten)]
+    info: Arc<WatchInfo>,
+    is_favorite: bool,
+}
+
+/// Runs yt-dlp (only when the user opens a video, never to prefetch).
+#[tauri::command]
+pub async fn watch_info(state: State<'_, AppState>, id: String, force: bool) -> Result<Watch> {
+    let info = state.player.info(&id, force).await?;
+    let is_favorite = match &info.channel_id {
+        Some(c) => db::is_favorite(&*lock(&state)?, c)?,
+        None => false,
+    };
+    Ok(Watch { info, is_favorite })
+}
+
+#[tauri::command]
+pub async fn stream_index(state: State<'_, AppState>, key: String) -> Result<sidx::Index> {
+    state.player.index(&state.http, &key).await
+}
+
+#[tauri::command]
+pub async fn sponsor_segments(state: State<'_, AppState>, id: String) -> Result<Vec<sponsorblock::Segment>> {
+    if !player::is_video_id(&id) {
+        return Err(Error::msg("Bad video id"));
+    }
+    sponsorblock::segments(&state.http, &id).await
+}
+
+#[tauri::command]
+pub fn open_in_mpv(state: State<'_, AppState>, id: String, title: String, start: f64) -> Result<()> {
+    player::open_in_mpv(&state.player, &id, &title, start)
+}
+
+#[tauri::command]
+pub fn mark_watched(state: State<'_, AppState>, id: String) -> Result<()> {
+    if !player::is_video_id(&id) {
+        return Err(Error::msg("Bad video id"));
+    }
+    db::mark_watched(&*lock(&state)?, &id, now())
 }
