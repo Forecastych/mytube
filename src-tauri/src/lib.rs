@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod error;
+mod feed;
 mod net;
 mod player;
 mod youtube;
@@ -38,6 +39,9 @@ pub fn run() {
             commands::sponsor_segments,
             commands::open_in_mpv,
             commands::mark_watched,
+            feed::commands::algorithm_get,
+            feed::commands::algorithm_set,
+            feed::commands::blocked_channel_resolve,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

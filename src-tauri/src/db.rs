@@ -36,6 +36,13 @@ const MIGRATIONS: &[&str] = &[
         video_id   TEXT PRIMARY KEY,
         watched_at INTEGER NOT NULL
     );",
+    // v2: feed rules (as JSON under a key) and Data API details for filters.
+    "CREATE TABLE settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    );
+    ALTER TABLE videos ADD COLUMN duration INTEGER;
+    ALTER TABLE videos ADD COLUMN category INTEGER;",
 ];
 
 pub fn open(path: &Path) -> Result<Connection> {

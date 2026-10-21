@@ -53,3 +53,11 @@
   --glass-alpha: 1;
   --glass-blur: 0px;
 }
+
+/* Feed sources: the dots in Algorithm → Feed mix. Same in both themes. */
+:root {
+  --src-favorites: #7c5cff;
+  --src-subscriptions: #3b9eff;
+  --src-trending: #3ddc84;
+  --src-related: #ff9f43;
+}

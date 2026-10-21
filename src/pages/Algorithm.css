@@ -1,0 +1,320 @@
+.algo {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1500px;
+}
+
+.algo-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.algo-head h1 {
+  margin: 0;
+  font-size: 28px;
+}
+.algo-head p {
+  margin: 2px 0 0;
+}
+.algo-status {
+  margin-left: auto;
+}
+
+.algo-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 400px);
+  gap: 28px;
+  align-items: start;
+}
+.algo-main,
+.algo-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* The content area is ~1000 px here: one column reads better. */
+@media (max-width: 1240px) {
+  .algo-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.algo-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.algo-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+.algo-card-head > svg {
+  flex: none;
+  margin-top: 2px;
+}
+.algo-card h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.algo-card h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.algo-card p {
+  margin: 2px 0 0;
+}
+
+.btn-outline {
+  background: transparent;
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.algo-row {
+  display: flex;
+  gap: 10px;
+}
+.algo-row .field {
+  flex: 1;
+  min-width: 0;
+}
+
+.algo-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.algo-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+}
+
+.algo-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.algo-x:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ---- Add topic menu ---- */
+
+.algo-pop-anchor {
+  position: relative;
+}
+.algo-pop {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  padding: 12px;
+  border-radius: var(--radius-card);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.algo-pop-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.algo-pop-item {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  cursor: pointer;
+}
+.algo-pop-item:hover {
+  border-color: var(--accent-2);
+}
+.algo-pop .field {
+  width: 100%;
+}
+
+/* ---- Blocked channels ---- */
+
+.algo-channels {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.algo-channels li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+}
+.algo-channels li + li {
+  border-top: 1px solid var(--border);
+}
+.algo-channels img,
+.algo-avatar {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+.algo-channels li > span:not(.algo-avatar) {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Feed mix ---- */
+
+.algo-mix {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.algo-mix li {
+  display: grid;
+  grid-template-columns: 14px minmax(150px, 1fr) minmax(120px, 2fr) 48px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+.algo-mix li + li {
+  border-top: 1px solid var(--border);
+}
+.algo-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+.src-favorites { background: var(--src-favorites); }
+.src-subscriptions { background: var(--src-subscriptions); }
+.src-trending { background: var(--src-trending); }
+.src-related { background: var(--src-related); }
+.algo-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.algo-mix input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--accent) var(--p), var(--border) var(--p));
+  cursor: pointer;
+}
+.algo-mix input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-2);
+  box-shadow: 0 0 0 4px rgb(124 92 255 / 0.25);
+}
+.algo-mix input[type="range"]:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 4px;
+}
+
+/* ---- Right column ---- */
+
+.algo-toggle {
+  flex-direction: row;
+  align-items: center;
+}
+.algo-toggle > svg {
+  flex: none;
+}
+.algo-toggle > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.algo-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.algo-preview img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-thumb);
+  background: var(--surface-2);
+}
+.algo-preview-top {
+  display: grid;
+  grid-template-columns: 55% 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.algo-preview-title {
+  font-weight: 600;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.algo-preview-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.algo-preview-empty {
+  margin: 0;
+}
+
+.algo-tip {
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+}
+.algo-tip svg {
+  flex: none;
+}
+.algo-tip p {
+  margin: 0;
+}
