@@ -1,0 +1,10 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "targets": ["nsis"],
+    "externalBin": ["binaries/yt-dlp"],
+    "windows": {
+      "nsis": { "installMode": "currentUser" }
+    }
+  }
+}

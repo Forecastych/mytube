@@ -93,19 +93,20 @@ fn binary() -> PathBuf {
     PathBuf::from("yt-dlp")
 }
 
-pub async fn fetch(video_id: &str) -> Result<Info> {
+fn command() -> Command {
     let mut cmd = Command::new(binary());
-    cmd.args(["--ignore-config", "--no-cookies", "--no-cookies-from-browser"])
-        .args(["--no-warnings", "--no-playlist", "--dump-json"])
-        .arg("--")
-        .arg(format!("https://www.youtube.com/watch?v={video_id}"))
+    // No user config: it could add `--cookies-from-browser`.
+    cmd.arg("--ignore-config")
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(true);
     #[cfg(windows)]
     cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW: no console flash
+    cmd
+}
 
+async fn run(mut cmd: Command, timeout: Duration) -> Result<std::process::Output> {
     let child = cmd.spawn().map_err(|e| {
         if e.kind() == std::io::ErrorKind::NotFound {
             Error::msg("yt-dlp is missing. Reinstall MyTube or put yt-dlp on PATH.")
@@ -113,10 +114,19 @@ pub async fn fetch(video_id: &str) -> Result<Info> {
             Error::msg(format!("Couldn't start yt-dlp: {e}"))
         }
     })?;
-    let out = tokio::time::timeout(TIMEOUT, child.wait_with_output())
+    tokio::time::timeout(timeout, child.wait_with_output())
         .await
         .map_err(|_| Error::msg("YouTube didn't answer in time. Check your connection and try again."))?
-        .map_err(|e| Error::msg(format!("yt-dlp failed: {e}")))?;
+        .map_err(|e| Error::msg(format!("yt-dlp failed: {e}")))
+}
+
+pub async fn fetch(video_id: &str) -> Result<Info> {
+    let mut cmd = command();
+    cmd.args(["--no-cookies", "--no-cookies-from-browser"])
+        .args(["--no-warnings", "--no-playlist", "--dump-json"])
+        .arg("--")
+        .arg(format!("https://www.youtube.com/watch?v={video_id}"));
+    let out = run(cmd, TIMEOUT).await?;
 
     if !out.status.success() {
         let stderr = String::from_utf8_lossy(&out.stderr);
@@ -124,6 +134,34 @@ pub async fn fetch(video_id: &str) -> Result<Info> {
         return Err(Error::msg(human_error(&stderr)));
     }
     serde_json::from_slice(&out.stdout).map_err(|e| Error::msg(format!("Unexpected yt-dlp output: {e}")))
+}
+
+pub async fn version() -> Result<String> {
+    let mut cmd = command();
+    cmd.arg("--version");
+    let out = run(cmd, Duration::from_secs(20)).await?;
+    let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    if !out.status.success() || v.is_empty() {
+        return Err(Error::msg("yt-dlp didn't report its version"));
+    }
+    Ok(v)
+}
+
+/// `yt-dlp -U`: the release exe replaces itself next to ours. Installs from
+/// pip or winget refuse and say how to update instead; that text is shown as is.
+pub async fn update() -> Result<String> {
+    let mut cmd = command();
+    cmd.arg("-U");
+    let out = run(cmd, Duration::from_secs(180)).await?;
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let last = |s: &str| s.lines().rev().map(str::trim).find(|l| !l.is_empty()).map(String::from);
+    if out.status.success() {
+        return Ok(last(&stdout).unwrap_or_else(|| "yt-dlp is up to date".into()));
+    }
+    eprintln!("yt-dlp -U: {}", stderr.trim());
+    let line = last(&stderr).or_else(|| last(&stdout)).unwrap_or_else(|| "yt-dlp couldn't update".into());
+    Err(Error::msg(line.trim_start_matches("ERROR:").trim().to_string()))
 }
 
 /// yt-dlp errors are written for developers; turn the common ones into
@@ -167,6 +205,14 @@ pub fn published(info: &Info) -> Option<i64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Needs yt-dlp on PATH: `cargo test ytdlp::tests::local_version -- --ignored`.
+    #[tokio::test]
+    #[ignore]
+    async fn local_version() {
+        let v = version().await.unwrap();
+        assert!(v.starts_with("20"), "{v}");
+    }
 
     #[test]
     fn bot_check_is_explained() {

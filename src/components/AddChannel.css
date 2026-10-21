@@ -11,6 +11,6 @@
 }
 .form-error {
   margin-top: 8px;
-  color: #ff6b81;
+  color: var(--danger);
   font-size: 13px;
 }

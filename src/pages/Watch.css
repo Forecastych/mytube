@@ -89,7 +89,7 @@
   background: rgb(124 92 255 / 0.12);
 }
 .watch-error {
-  color: #ff6b6b;
+  color: var(--danger);
 }
 
 .watch-desc {

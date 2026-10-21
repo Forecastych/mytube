@@ -8,7 +8,7 @@ use tokio::sync::Semaphore;
 
 use crate::db::{self, Channel, Video};
 use crate::error::{Error, Result};
-use crate::player::{self, sidx, sponsorblock, Player, WatchInfo};
+use crate::player::{self, sidx, sponsorblock, ytdlp, Player, WatchInfo};
 use crate::youtube::{channel, rss};
 
 pub struct AppState {
@@ -140,6 +140,16 @@ pub async fn sponsor_segments(state: State<'_, AppState>, id: String) -> Result<
 #[tauri::command]
 pub fn open_in_mpv(state: State<'_, AppState>, id: String, title: String, start: f64) -> Result<()> {
     player::open_in_mpv(&state.player, &id, &title, start)
+}
+
+#[tauri::command]
+pub async fn ytdlp_version() -> Result<String> {
+    ytdlp::version().await
+}
+
+#[tauri::command]
+pub async fn ytdlp_update() -> Result<String> {
+    ytdlp::update().await
 }
 
 #[tauri::command]

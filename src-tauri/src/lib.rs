@@ -39,6 +39,8 @@ pub fn run() {
             commands::sponsor_segments,
             commands::open_in_mpv,
             commands::mark_watched,
+            commands::ytdlp_version,
+            commands::ytdlp_update,
             feed::commands::algorithm_get,
             feed::commands::algorithm_set,
             feed::commands::blocked_channel_resolve,

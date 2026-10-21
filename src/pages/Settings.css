@@ -169,3 +169,11 @@
   padding-left: 18px;
   line-height: 1.7;
 }
+
+.settings-status {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.settings-status.error {
+  color: var(--danger);
+}

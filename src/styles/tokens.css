@@ -10,6 +10,7 @@
   --accent: #5b3df5;
   --accent-2: #7c5cff;
   --up: #3ddc84;
+  --danger: #ff6b81;
 
   --radius-card: 10px;
   --radius-thumb: 8px;
@@ -40,6 +41,7 @@
   --accent: #5b3df5;
   --accent-2: #7c5cff;
   --up: #12a150;
+  --danger: #d6334f;
 
   --glass-tint: 255 255 255;
   --glass-highlight: rgb(255 255 255 / 0.7);

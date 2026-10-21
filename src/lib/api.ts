@@ -65,6 +65,9 @@ export const api = {
   sponsorSegments: (id: string) => invoke<SponsorSegment[]>("sponsor_segments", { id }),
   openInMpv: (id: string, title: string, start: number) => invoke<void>("open_in_mpv", { id, title, start }),
   markWatched: (id: string) => invoke<void>("mark_watched", { id }),
+  ytdlpVersion: () => invoke<string>("ytdlp_version"),
+  /** Runs `yt-dlp -U`; resolves with its last line of output. */
+  ytdlpUpdate: () => invoke<string>("ytdlp_update"),
 };
 
 /** `stream://` URL the webview can fetch (`http://stream.localhost/...` on Windows). */

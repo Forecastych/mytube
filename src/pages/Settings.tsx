@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
-import { Moon, Palette, Play, RotateCcw, Sun, Wrench, type LucideIcon } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Moon, Package, Palette, Play, RefreshCw, RotateCcw, Sun, Wrench, type LucideIcon } from "lucide-react";
 import { Switch } from "../components/Switch";
+import { api, errorText } from "../lib/api";
 import { defaults, setPref, usePref } from "../lib/prefs";
 import "./Settings.css";
 
@@ -33,11 +34,10 @@ export default function Settings() {
       </header>
       <Appearance />
       <Playback />
+      <YtDlp />
       <Card icon={Wrench} title="Coming next" note="Not built yet: listed so you know where they will live.">
         <ul className="settings-later muted">
           <li>Account: sign in with your own Google Cloud client to import subscriptions.</li>
-          <li>Network: bypass for slowed-down YouTube, on automatically only when needed.</li>
-          <li>yt-dlp: bundled with the app, with an Update button.</li>
         </ul>
       </Card>
     </div>
@@ -151,6 +151,48 @@ function Playback() {
         ))}
         <div className="muted small">Unchecked ones still show on the seek bar.</div>
       </div>
+    </Card>
+  );
+}
+
+function YtDlp() {
+  const [version, setVersion] = useState<string | null>(null);
+  const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    api.ytdlpVersion().then(
+      (v) => alive && setVersion(v),
+      (e) => alive && setStatus({ ok: false, text: errorText(e) }),
+    );
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const update = async () => {
+    setBusy(true);
+    setStatus(null);
+    try {
+      setStatus({ ok: true, text: await api.ytdlpUpdate() });
+      setVersion(await api.ytdlpVersion());
+    } catch (e) {
+      setStatus({ ok: false, text: errorText(e) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card icon={Package} title="yt-dlp" note="Gets the video streams. When videos stop opening, updating it is the first fix.">
+      <Row label="Version" value={version ?? "…"}>
+        <button className="btn" onClick={update} disabled={busy}>
+          <RefreshCw size={15} className={busy ? "spin" : undefined} />
+          {busy ? "Updating…" : "Update"}
+        </button>
+      </Row>
+      {status && <p className={`small settings-status${status.ok ? " muted" : " error"}`}>{status.text}</p>}
     </Card>
   );
 }
