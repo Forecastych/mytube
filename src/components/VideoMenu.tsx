@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import { Ban, EyeOff, Link2, MonitorPlay, Star, StarOff } from "lucide-react";
 import { api, errorText, type Video } from "../lib/api";
-import { canBlockVideos, setChannelBlocked, setVideoBlocked } from "../lib/algorithm";
+import { setChannelBlocked, setVideoBlocked } from "../lib/algorithm";
 import { addFavorite, removeFavorite, useFavorites } from "../lib/favorites";
 import { hide } from "../lib/hidden";
 import "./VideoMenu.css";
@@ -70,7 +70,6 @@ export function VideoMenu() {
 function Menu({ v, x, y, toast }: Open & { toast: (t: Toast) => void }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ left: x, top: y });
-  const [videoOk, setVideoOk] = useState(false);
   const { channels } = useFavorites();
   const favorite = channels.some((c) => c.id === v.channelId);
 
@@ -83,8 +82,6 @@ function Menu({ v, x, y, toast }: Open & { toast: (t: Toast) => void }) {
   }, [x, y]);
 
   useEffect(() => {
-    let alive = true;
-    canBlockVideos().then((ok) => alive && setVideoOk(ok));
     const outside = (e: PointerEvent) => !ref.current?.contains(e.target as Node) && close();
     const key = (e: KeyboardEvent) => e.key === "Escape" && close();
     addEventListener("pointerdown", outside, true);
@@ -94,7 +91,6 @@ function Menu({ v, x, y, toast }: Open & { toast: (t: Toast) => void }) {
     addEventListener("blur", close);
     addEventListener("hashchange", close);
     return () => {
-      alive = false;
       removeEventListener("pointerdown", outside, true);
       removeEventListener("keydown", key);
       removeEventListener("wheel", close);
@@ -167,7 +163,7 @@ function Menu({ v, x, y, toast }: Open & { toast: (t: Toast) => void }) {
       <div className="vmenu-title" title={v.title}>
         {v.title}
       </div>
-      <button role="menuitem" onClick={blockVideo} disabled={!videoOk} title={videoOk ? undefined : "Coming soon"}>
+      <button role="menuitem" onClick={blockVideo}>
         <EyeOff size={16} /> Hide this video
       </button>
       <button role="menuitem" className="danger" onClick={blockChannel}>

@@ -131,13 +131,8 @@ export async function setChannelBlocked(ch: BlockedChannel, blocked: boolean) {
 }
 
 /** False until the backend knows about blocked videos. */
-export async function canBlockVideos() {
-  return (await loadedRules().catch(() => null))?.blockedVideos != null;
-}
-
 export async function setVideoBlocked(v: BlockedVideo, blocked: boolean) {
   const rules = await loadedRules();
-  if (!rules.blockedVideos) throw "Blocking single videos isn't available yet";
   const list = rules.blockedVideos.filter((x) => x.id !== v.id);
   updateRules({ blockedVideos: blocked ? [...list, v] : list });
 }
