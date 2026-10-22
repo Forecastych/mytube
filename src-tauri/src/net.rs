@@ -1,5 +1,5 @@
 //! The one HTTP client for the whole app. Every request to Google/YouTube goes
-//! through it, so the DPI-bypass proxy plugs in here (`Proxy::https`) later.
+//! through it, so a user-set proxy, if one is ever added, plugs in here.
 
 use std::time::Duration;
 

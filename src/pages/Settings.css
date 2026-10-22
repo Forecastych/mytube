@@ -164,16 +164,56 @@
   margin-top: 4px;
 }
 
-.settings-later {
-  margin: 0;
-  padding-left: 18px;
-  line-height: 1.7;
-}
-
 .settings-status {
   margin: 4px 0 0;
   overflow-wrap: anywhere;
 }
 .settings-status.error {
   color: var(--danger);
+}
+
+/* ---- Account ---- */
+
+.account-avatar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-right: -12px;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+.account-actions {
+  display: flex;
+  gap: 8px;
+}
+.account-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.account-form p {
+  margin: 0;
+}
+.account-steps {
+  margin: 0 0 4px;
+  padding-left: 18px;
+  line-height: 1.7;
+}
+.account-steps b {
+  color: var(--text);
+  font-weight: 500;
+}
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-2);
+  font: inherit;
+  cursor: pointer;
+}
+.link:hover {
+  text-decoration: underline;
 }

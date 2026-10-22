@@ -1,8 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { Moon, Package, Palette, Play, RefreshCw, RotateCcw, Sun, Wrench, type LucideIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Moon, Package, Palette, Play, RefreshCw, RotateCcw, Sun } from "lucide-react";
 import { Switch } from "../components/Switch";
 import { api, errorText } from "../lib/api";
 import { defaults, setPref, usePref } from "../lib/prefs";
+import { Account } from "./settings/Account";
+import { Card, Row } from "./settings/parts";
 import "./Settings.css";
 
 const QUALITIES = [
@@ -32,14 +34,10 @@ export default function Settings() {
         <h1>Settings</h1>
         <p className="muted">Stored on this computer only.</p>
       </header>
+      <Account />
       <Appearance />
       <Playback />
       <YtDlp />
-      <Card icon={Wrench} title="Coming next" note="Not built yet: listed so you know where they will live.">
-        <ul className="settings-later muted">
-          <li>Account: sign in with your own Google Cloud client to import subscriptions.</li>
-        </ul>
-      </Card>
     </div>
   );
 }
@@ -194,47 +192,5 @@ function YtDlp() {
       </Row>
       {status && <p className={`small settings-status${status.ok ? " muted" : " error"}`}>{status.text}</p>}
     </Card>
-  );
-}
-
-function Card({ icon: Icon, title, note, children }: { icon: LucideIcon; title: string; note?: string; children: ReactNode }) {
-  return (
-    <section className="settings-card">
-      <div className="settings-card-head">
-        <Icon size={20} className="accent" />
-        <div>
-          <h2>{title}</h2>
-          {note && <p className="muted small">{note}</p>}
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Row({
-  label,
-  hint,
-  value,
-  disabled,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  value?: string;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <div className={`settings-row${disabled ? " disabled" : ""}`}>
-      <div className="settings-row-text">
-        <div>
-          {label}
-          {value && <span className="muted settings-value">{value}</span>}
-        </div>
-        {hint && <div className="muted small">{hint}</div>}
-      </div>
-      <div className="settings-row-control">{children}</div>
-    </div>
   );
 }

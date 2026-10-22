@@ -372,7 +372,7 @@ function VideosCard({ rules }: { rules: Rules }) {
         </ul>
       )}
       {!all && list.length > VIDEOS_SHOWN && (
-        <button className="btn btn-ghost algo-more" onClick={() => setAll(true)}>
+        <button className="btn algo-more" onClick={() => setAll(true)}>
           Show all {list.length}
         </button>
       )}

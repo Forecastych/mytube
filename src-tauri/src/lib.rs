@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod error;
 mod feed;
+mod google;
 mod net;
 mod player;
 mod youtube;
@@ -27,6 +28,7 @@ pub fn run() {
             std::fs::create_dir_all(&dir)?;
             let conn = db::open(&dir.join("mytube.db"))?;
             app.manage(AppState { db: Mutex::new(conn), http: net::client(), player: Default::default() });
+            app.manage(google::GoogleState::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -46,6 +48,12 @@ pub fn run() {
             feed::commands::algorithm_get,
             feed::commands::algorithm_set,
             feed::commands::blocked_channel_resolve,
+            google::commands::google_status,
+            google::commands::google_set_client,
+            google::commands::google_sign_in,
+            google::commands::google_sign_in_cancel,
+            google::commands::google_sign_out,
+            google::commands::google_forget_client,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
