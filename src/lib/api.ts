@@ -23,6 +23,18 @@ export type Video = {
 /** `hidden`: dropped by the Algorithm rules. */
 export type FavoritesFeed = { videos: Video[]; hidden: number; failed: string[] };
 
+export type SearchChannel = {
+  id: string;
+  title: string;
+  avatar: string | null;
+  /** "@kurzgesagt" */
+  handle: string | null;
+  /** "25.7M subscribers" */
+  subscribers: string | null;
+};
+/** `hidden`: dropped by the Algorithm rules. */
+export type SearchPage = { channels: SearchChannel[]; videos: Video[]; hidden: number; next: string | null };
+
 export type Track = {
   /** path under `stream://` */
   key: string;
@@ -93,6 +105,8 @@ export const api = {
   comments: (id: string) => invoke<CommentsPage>("comments", { id }),
   /** Next page, another sort order, or a thread's replies. */
   commentsMore: (token: string) => invoke<CommentsPage>("comments_more", { token }),
+  /** Anonymous Innertube search; `next` continues the same query. */
+  search: (query: string, next: string | null = null) => invoke<SearchPage>("search", { query, next }),
   markWatched: (id: string) => invoke<void>("mark_watched", { id }),
   ytdlpVersion: () => invoke<string>("ytdlp_version"),
   /** Runs `yt-dlp -U`; resolves with its last line of output. */

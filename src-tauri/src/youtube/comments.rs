@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 use crate::error::{Error, Result};
 
 const NEXT: &str = "https://www.youtube.com/youtubei/v1/next?prettyPrint=false";
-const CLIENT_VERSION: &str = "2.20251020.01.00";
+pub(super) const CLIENT_VERSION: &str = "2.20251020.01.00";
 
 #[derive(Serialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -163,13 +163,13 @@ fn sort_options(header: &Value) -> Vec<SortOption> {
 }
 
 /// The first `continuationCommand.token` anywhere under `v`.
-fn token_in(v: &Value) -> Option<String> {
+pub(super) fn token_in(v: &Value) -> Option<String> {
     let mut cmds = Vec::new();
     find_all(v, "continuationCommand", &mut cmds);
     cmds.iter().find_map(|c| c["token"].as_str()).map(str::to_owned)
 }
 
-fn find_all<'a>(v: &'a Value, key: &str, out: &mut Vec<&'a Value>) {
+pub(super) fn find_all<'a>(v: &'a Value, key: &str, out: &mut Vec<&'a Value>) {
     match v {
         Value::Object(map) => {
             for (k, child) in map {

@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, type FormEvent } from "react";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Moon, Search, Sun } from "lucide-react";
 import { usePref } from "../lib/prefs";
 import "./Header.css";
@@ -8,8 +8,16 @@ export function Header() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [theme, setTheme] = usePref("theme");
+  const { pathname } = useLocation();
+  const [params] = useSearchParams();
+  const shown = pathname === "/search" ? (params.get("q") ?? "") : null;
 
-  // search.list costs 100 units: search on submit only, never per keystroke.
+  // The box shows the query of the results on screen (back/forward included).
+  useEffect(() => {
+    if (shown != null) setQuery(shown);
+  }, [shown]);
+
+  // On submit only, never per keystroke: each search is a request to YouTube.
   function submit(e: FormEvent) {
     e.preventDefault();
     const q = query.trim();
