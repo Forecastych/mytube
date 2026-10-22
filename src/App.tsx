@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { HashRouter, Route, Routes } from "react-router-dom";
+import { ScreenBoundary } from "./components/ErrorBoundary";
 import { GlassFilter } from "./components/GlassFilter";
 import { Header } from "./components/Header";
 import { Sidebar } from "./components/Sidebar";
@@ -23,17 +24,19 @@ export default function App() {
         <main className="content">
           <Header />
           <div className="page">
-            <Suspense fallback={null}>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/favorites" element={<Favorites />} />
-                <Route path="/trending" element={<Placeholder title="Trending" note="By region and category." />} />
-                <Route path="/search" element={<Placeholder title="Search" note="Press Enter in the search bar." />} />
-                <Route path="/algorithm" element={<Algorithm />} />
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/watch/:id" element={<Watch />} />
-              </Routes>
-            </Suspense>
+            <ScreenBoundary>
+              <Suspense fallback={null}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/favorites" element={<Favorites />} />
+                  <Route path="/trending" element={<Placeholder title="Trending" note="By region and category." />} />
+                  <Route path="/search" element={<Placeholder title="Search" note="Press Enter in the search bar." />} />
+                  <Route path="/algorithm" element={<Algorithm />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/watch/:id" element={<Watch />} />
+                </Routes>
+              </Suspense>
+            </ScreenBoundary>
           </div>
         </main>
       </div>
