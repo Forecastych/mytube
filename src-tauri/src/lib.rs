@@ -41,6 +41,8 @@ pub fn run() {
             commands::mark_watched,
             commands::ytdlp_version,
             commands::ytdlp_update,
+            commands::comments,
+            commands::comments_more,
             feed::commands::algorithm_get,
             feed::commands::algorithm_set,
             feed::commands::blocked_channel_resolve,

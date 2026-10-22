@@ -9,7 +9,7 @@ use tokio::sync::Semaphore;
 use crate::db::{self, Channel, Video};
 use crate::error::{Error, Result};
 use crate::player::{self, sidx, sponsorblock, ytdlp, Player, WatchInfo};
-use crate::youtube::{channel, rss};
+use crate::youtube::{channel, comments, rss};
 
 pub struct AppState {
     pub db: Mutex<Connection>,
@@ -150,6 +150,20 @@ pub async fn ytdlp_version() -> Result<String> {
 #[tauri::command]
 pub async fn ytdlp_update() -> Result<String> {
     ytdlp::update().await
+}
+
+#[tauri::command]
+pub async fn comments(state: State<'_, AppState>, id: String) -> Result<comments::Page> {
+    if !player::is_video_id(&id) {
+        return Err(Error::msg("Bad video id"));
+    }
+    comments::first(&state.http, &id).await
+}
+
+/// Next page, another sort order, or a thread's replies.
+#[tauri::command]
+pub async fn comments_more(state: State<'_, AppState>, token: String) -> Result<comments::Page> {
+    comments::more(&state.http, &token).await
 }
 
 #[tauri::command]
