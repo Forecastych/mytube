@@ -42,6 +42,7 @@ pub struct Candidate {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Reason {
+    Video,
     Channel,
     Topic,
     Word,
@@ -52,6 +53,7 @@ pub enum Reason {
 
 /// `Rules` compiled once per ranking.
 pub struct Filters {
+    videos: HashSet<String>,
     channels: HashSet<String>,
     categories: HashSet<u32>,
     patterns: Vec<(Reason, Pattern)>,
@@ -77,6 +79,7 @@ impl Filters {
         patterns.extend(rules.blocked_words.iter().filter_map(|w| Pattern::new(w)).map(|p| (Reason::Word, p)));
 
         Self {
+            videos: rules.blocked_videos.iter().map(|v| v.id.clone()).collect(),
             channels: rules.blocked_channels.iter().map(|c| c.id.clone()).collect(),
             categories,
             patterns,
@@ -88,6 +91,9 @@ impl Filters {
 
     /// Why `c` is hidden, or `None` if it stays.
     pub fn reason(&self, c: &Candidate) -> Option<Reason> {
+        if self.videos.contains(&c.id) {
+            return Some(Reason::Video);
+        }
         if self.channels.contains(&c.channel_id) {
             return Some(Reason::Channel);
         }
@@ -203,7 +209,7 @@ fn slot(s: Source) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::feed::rules::{BlockedChannel, Mix};
+    use crate::feed::rules::{BlockedChannel, BlockedVideo, Mix};
 
     fn v(id: &str, source: Source, published: i64) -> Candidate {
         Candidate {
@@ -238,9 +244,11 @@ mod tests {
             blocked_topics: vec!["cooking".into(), "sports".into()],
             blocked_words: vec!["top 10".into()],
             blocked_channels: vec![BlockedChannel { id: format!("UC{:x<22}", "bad"), title: "Bad".into(), avatar: None }],
+            blocked_videos: vec![BlockedVideo { id: "hidden".into(), title: "Hidden".into() }],
             ..Rules::default()
         };
         let f = Filters::new(&rules);
+        assert_eq!(f.reason(&v("hidden", Source::Favorites, 0)), Some(Reason::Video));
         let mut c = v("ok", Source::Trending, 0);
         assert_eq!(f.reason(&c), None);
 

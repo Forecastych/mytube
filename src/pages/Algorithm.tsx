@@ -5,6 +5,7 @@ import {
   Clock,
   EyeOff,
   FileText,
+  Film,
   Info,
   Link2Off,
   Plus,
@@ -58,6 +59,7 @@ export default function Algorithm() {
           <TopicsCard rules={rules} topics={topics} />
           <WordsCard rules={rules} />
           <ChannelsCard rules={rules} />
+          <VideosCard rules={rules} />
           <MixCard rules={rules} />
         </div>
 
@@ -333,6 +335,46 @@ function ChannelsCard({ rules }: { rules: Rules }) {
             </li>
           ))}
         </ul>
+      )}
+    </Card>
+  );
+}
+
+/** Shown before "Show all": the list can reach a thousand entries. */
+const VIDEOS_SHOWN = 20;
+
+function VideosCard({ rules }: { rules: Rules }) {
+  const [all, setAll] = useState(false);
+  const list = rules.blockedVideos;
+  // Stored oldest first; the one just hidden is the one people look for.
+  const newest = list.slice().reverse();
+  const shown = all ? newest : newest.slice(0, VIDEOS_SHOWN);
+
+  return (
+    <Card icon={Film} title="Hidden videos" note="Right-click a video card → Hide this video. It won't show up again.">
+      {list.length === 0 ? (
+        <p className="muted small">Nothing hidden yet.</p>
+      ) : (
+        <ul className="algo-channels algo-videos">
+          {shown.map((v) => (
+            <li key={v.id}>
+              <img src={thumb(v.id)} alt="" loading="lazy" decoding="async" />
+              <span>{v.title || v.id}</span>
+              <button
+                className="algo-x"
+                title={`Show ${v.title || "this video"} again`}
+                onClick={() => updateRules({ blockedVideos: list.filter((x) => x.id !== v.id) })}
+              >
+                <X size={16} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!all && list.length > VIDEOS_SHOWN && (
+        <button className="btn btn-ghost algo-more" onClick={() => setAll(true)}>
+          Show all {list.length}
+        </button>
       )}
     </Card>
   );

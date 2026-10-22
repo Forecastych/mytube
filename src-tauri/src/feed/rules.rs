@@ -4,10 +4,13 @@
 use serde::{Deserialize, Serialize};
 
 use super::{text, topics};
+use crate::player::is_video_id;
 use crate::youtube::channel::is_channel_id;
 
 /// Per list. Far above any hand-made list, low enough to keep `rank` cheap.
 pub const MAX_ITEMS: usize = 300;
+/// Single videos pile up faster (one click each); a set lookup keeps it cheap.
+pub const MAX_VIDEOS: usize = 1000;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,6 +32,14 @@ pub struct BlockedChannel {
     pub id: String,
     pub title: String,
     pub avatar: Option<String>,
+}
+
+/// One video hidden from the card menu. The title is only for the list on
+/// the Algorithm screen.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct BlockedVideo {
+    pub id: String,
+    pub title: String,
 }
 
 /// Shares of the Home feed in percent. Always sums to 100 after `sanitize`.
@@ -92,6 +103,8 @@ pub struct Rules {
     pub blocked_topics: Vec<String>,
     pub blocked_words: Vec<String>,
     pub blocked_channels: Vec<BlockedChannel>,
+    /// Oldest first; past `MAX_VIDEOS` the oldest are dropped.
+    pub blocked_videos: Vec<BlockedVideo>,
     pub mix: Mix,
     pub hide_shorts: bool,
     /// Hide videos shorter than this; 0 = off. Applies only where the
@@ -108,6 +121,7 @@ impl Default for Rules {
             blocked_topics: Vec::new(),
             blocked_words: Vec::new(),
             blocked_channels: Vec::new(),
+            blocked_videos: Vec::new(),
             mix: Mix::default(),
             hide_shorts: true,
             min_minutes: 3,
@@ -135,6 +149,20 @@ impl Rules {
                 c.avatar = None;
             }
         }
+
+        // Walk newest first so a re-block keeps its latest position.
+        let mut seen = std::collections::HashSet::new();
+        let mut videos: Vec<BlockedVideo> = std::mem::take(&mut self.blocked_videos)
+            .into_iter()
+            .rev()
+            .filter(|v| is_video_id(&v.id) && seen.insert(v.id.clone()))
+            .take(MAX_VIDEOS)
+            .collect();
+        videos.reverse();
+        for v in &mut videos {
+            v.title = v.title.trim().chars().take(200).collect();
+        }
+        self.blocked_videos = videos;
 
         self.mix.normalize();
         self.min_minutes = self.min_minutes.min(60);
@@ -187,6 +215,22 @@ mod tests {
         assert_eq!(r.blocked_channels.len(), 1);
         assert_eq!(r.blocked_channels[0].title, "A");
         assert_eq!(r.blocked_channels[0].avatar, None);
+    }
+
+    #[test]
+    fn sanitize_caps_blocked_videos() {
+        let v = |id: String| BlockedVideo { id, title: " t ".into() };
+        let mut r = Rules {
+            blocked_videos: (0..MAX_VIDEOS + 5).map(|i| v(format!("{i:0>11}"))).collect(),
+            ..Rules::default()
+        };
+        r.blocked_videos.push(v("bad id".into()));
+        r.blocked_videos.push(v(format!("{:0>11}", 0))); // re-blocked: moves to the end
+        r.sanitize();
+        assert_eq!(r.blocked_videos.len(), MAX_VIDEOS);
+        assert_eq!(r.blocked_videos.last().unwrap().id, format!("{:0>11}", 0));
+        assert_eq!(r.blocked_videos[0].id, format!("{:0>11}", 6)); // 1..=5 dropped as oldest
+        assert_eq!(r.blocked_videos[0].title, "t");
     }
 
     #[test]

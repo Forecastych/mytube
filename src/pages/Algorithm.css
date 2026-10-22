@@ -199,6 +199,17 @@
   white-space: nowrap;
 }
 
+.algo-videos img {
+  width: 64px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+.algo-more {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
 /* ---- Feed mix ---- */
 
 .algo-mix {

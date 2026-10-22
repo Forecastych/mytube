@@ -16,8 +16,8 @@ export type Rules = {
   blockedTopics: string[];
   blockedWords: string[];
   blockedChannels: BlockedChannel[];
-  /** Absent until the backend stores it; the card menu checks for it. */
-  blockedVideos?: BlockedVideo[];
+  /** Oldest first. */
+  blockedVideos: BlockedVideo[];
   mix: Mix;
   hideShorts: boolean;
   /** 0 = off */
