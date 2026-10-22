@@ -2,7 +2,7 @@
 
 A personal desktop YouTube client with its own design and a feed algorithm **you** control.
 
-> **Status:** early development. Nothing to download yet.
+> **Status:** early development. Windows installer: [Releases](https://github.com/Forecastych/mytube/releases/latest).
 
 ![Home](docs/design/home.webp)
 
