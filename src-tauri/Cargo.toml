@@ -1,6 +1,6 @@
 [package]
 name = "mytube"
-version = "0.2.0"
+version = "0.2.1"
 description = "Personal YouTube desktop client"
 edition = "2024"
 
@@ -42,3 +42,6 @@ strip = true
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"

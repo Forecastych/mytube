@@ -2467,7 +2467,7 @@ dependencies = [
 
 [[package]]
 name = "mytube"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "getrandom 0.4.3",
  "keyring",
@@ -2480,6 +2480,7 @@ dependencies = [
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
+ "tauri-plugin-single-instance",
  "thiserror 2.0.21",
  "time",
  "tokio",
@@ -4290,6 +4291,22 @@ dependencies = [
  "thiserror 2.0.21",
  "url",
  "windows",
+ "zbus",
+]
+
+[[package]]
+name = "tauri-plugin-single-instance"
+version = "2.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "561cd99484561bc39c954768e7b41a66cebbe1ac3d9d081c34361f740c489e2c"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tauri",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "windows-sys 0.61.2",
  "zbus",
 ]
 

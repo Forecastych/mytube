@@ -16,7 +16,19 @@ use commands::AppState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    // A second launch (shortcut clicked again) brings up the open window
+    // instead of a second copy with its own player and database handle.
+    // Registered first, so the second process quits before setting anything up.
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+        if let Some(w) = app.get_webview_window("main") {
+            let _ = w.unminimize();
+            let _ = w.show();
+            let _ = w.set_focus();
+        }
+    }));
+    builder
         .plugin(tauri_plugin_opener::init())
         .register_asynchronous_uri_scheme_protocol("stream", |ctx, req, responder| {
             let app = ctx.app_handle().clone();
