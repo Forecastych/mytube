@@ -5,7 +5,9 @@ import { api, errorText, thumb, type Video, type WatchInfo } from "../lib/api";
 import { addFavorite, removeFavorite, useFavorites } from "../lib/favorites";
 import { ago, clock, views } from "../lib/format";
 import { pref, setPref } from "../lib/prefs";
+import { resumeAt } from "../lib/progress";
 import { Player, PlayerPlaceholder } from "../components/player/Player";
+import { WatchedBar } from "../components/VideoCard";
 import { Linkified, VIDEO_ID } from "./watch/Linkified";
 import { Comments } from "./watch/Comments";
 import "./Watch.css";
@@ -23,6 +25,8 @@ function Watch({ id }: { id: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [load, setLoad] = useState({ force: false, start: Number(params.get("t")) || 0 });
   const [info, setInfo] = useState<WatchInfo | null>(null);
+  // Saved position, used only when nothing else says where to start (?t=, a reload after 403).
+  const [resume, setResume] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const lastExpiry = useRef(0);
   const [upNextOpen, setUpNextOpen] = useState(() => pref("upNextOpen"));
@@ -34,8 +38,12 @@ function Watch({ id }: { id: string }) {
     }
     let alive = true;
     setError(null);
-    api.watchInfo(id, load.force).then(
-      (i) => alive && setInfo(i),
+    Promise.all([api.watchInfo(id, load.force), load.start ? 0 : resumeAt(id)]).then(
+      ([i, r]) => {
+        if (!alive) return;
+        setResume(i.isLive ? 0 : r);
+        setInfo(i);
+      },
       (e) => alive && setError(errorText(e)),
     );
     return () => {
@@ -90,7 +98,7 @@ function Watch({ id }: { id: string }) {
         </div>
 
         {info ? (
-          <Player info={info} startAt={load.start} onExpired={onExpired} videoRef={videoRef} />
+          <Player info={info} startAt={load.start || resume} resumed={!load.start && resume > 0} onExpired={onExpired} videoRef={videoRef} />
         ) : (
           <PlayerPlaceholder id={id}>
             {error && (
@@ -242,6 +250,7 @@ const UpNextItem = memo(function UpNextItem({ v }: { v: Video }) {
       <div className="upnext-thumb">
         <img src={thumb(v.id)} alt="" loading="lazy" decoding="async" />
         {v.isNew && <span className="badge-new">NEW</span>}
+        <WatchedBar id={v.id} />
       </div>
       <div className="upnext-text">
         <div className="upnext-title">{v.title}</div>

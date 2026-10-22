@@ -5,6 +5,7 @@ mod feed;
 mod google;
 mod net;
 mod player;
+mod progress;
 mod youtube;
 
 use std::sync::Mutex;
@@ -45,6 +46,8 @@ pub fn run() {
             commands::ytdlp_update,
             commands::comments,
             commands::comments_more,
+            progress::save_progress,
+            progress::progress_list,
             feed::commands::algorithm_get,
             feed::commands::algorithm_set,
             feed::commands::blocked_channel_resolve,

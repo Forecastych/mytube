@@ -4,7 +4,9 @@ import { ExternalLink, LoaderCircle, RotateCw } from "lucide-react";
 import { api, errorText, poster, streamUrl, type SponsorSegment, type Track, type WatchInfo } from "../../lib/api";
 import { Engine, StreamError, type TrackSource } from "../../lib/player/engine";
 import { markWatchedLocal } from "../../lib/favorites";
+import { clock } from "../../lib/format";
 import { pref, setPref } from "../../lib/prefs";
+import { saveProgress } from "../../lib/progress";
 import { Controls } from "./Controls";
 import "./Player.css";
 
@@ -40,9 +42,11 @@ type Props = {
   onExpired: (t: number, manual?: boolean) => void;
   /** The page reads/seeks the element through this (timestamps in the description). */
   videoRef?: RefObject<HTMLVideoElement | null>;
+  /** `startAt` came from saved progress: offer "Start over". */
+  resumed?: boolean;
 };
 
-export function Player({ info, startAt, onExpired, videoRef: outer }: Props) {
+export function Player({ info, startAt, onExpired, videoRef: outer, resumed }: Props) {
   const own = useRef<HTMLVideoElement>(null);
   const videoRef = outer ?? own;
   const boxRef = useRef<HTMLDivElement>(null);
@@ -53,6 +57,13 @@ export function Player({ info, startAt, onExpired, videoRef: outer }: Props) {
   const [fullscreen, setFullscreen] = useState(false);
   const [sponsor, setSponsor] = useState<SponsorSegment[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
+  const [resumeHint, setResumeHint] = useState(!!resumed);
+
+  useEffect(() => {
+    if (!resumeHint) return;
+    const t = setTimeout(() => setResumeHint(false), 8000);
+    return () => clearTimeout(t);
+  }, [resumeHint]);
 
   // Attach the stream. Re-runs only for a new video, not for quality changes.
   useEffect(() => {
@@ -151,6 +162,43 @@ export function Player({ info, startAt, onExpired, videoRef: outer }: Props) {
     return () => video.removeEventListener("timeupdate", onTime);
   }, [info]);
 
+  // Remember the position: on pause, every 10 s of playback and on leaving.
+  useEffect(() => {
+    if (info.isLive) return;
+    const video = videoRef.current!;
+    const length = () => info.duration || video.duration;
+    // Tracked here: by cleanup time the engine may already have reset the element.
+    // Nothing counts until playback starts: a page opened and closed keeps its old position.
+    let pos = -1;
+    let saved = -1;
+    let started = false;
+    const save = () => {
+      if (pos >= 0 && pos !== saved) saveProgress(info.id, pos, length());
+      saved = pos;
+    };
+    const onPlaying = () => (started = true);
+    const onTime = () => {
+      if (!started || video.seeking) return;
+      pos = video.currentTime;
+      if (Math.abs(pos - saved) >= 10) save();
+    };
+    const onEnded = () => {
+      pos = length();
+      save();
+    };
+    video.addEventListener("playing", onPlaying);
+    video.addEventListener("pause", save);
+    video.addEventListener("timeupdate", onTime);
+    video.addEventListener("ended", onEnded);
+    return () => {
+      save();
+      video.removeEventListener("playing", onPlaying);
+      video.removeEventListener("pause", save);
+      video.removeEventListener("timeupdate", onTime);
+      video.removeEventListener("ended", onEnded);
+    };
+  }, [info]);
+
   const toggleFullscreen = useCallback(async () => {
     const next = !fullscreen;
     setFullscreen(next);
@@ -202,6 +250,19 @@ export function Player({ info, startAt, onExpired, videoRef: outer }: Props) {
           onFullscreen={toggleFullscreen}
           onMpv={openMpv}
         />
+      )}
+      {resumeHint && !error && (
+        <div className="player-toast player-resume glass">
+          Continuing from {clock(startAt)}
+          <button
+            onClick={() => {
+              videoRef.current!.currentTime = 0;
+              setResumeHint(false);
+            }}
+          >
+            Start over
+          </button>
+        </div>
       )}
       {notice && (
         <div className="player-toast player-notice glass" onClick={() => setNotice(null)}>

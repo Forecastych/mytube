@@ -25,6 +25,9 @@
   --glass-highlight: rgb(255 255 255 / 0.14);
   --glass-shadow: 0 8px 32px rgb(0 0 0 / 0.35);
 
+  /* Over thumbnails, so the same in both themes. */
+  --thumb-track: rgb(0 0 0 / 0.45);
+
   --sidebar-w: 220px;
   --header-h: 64px;
 

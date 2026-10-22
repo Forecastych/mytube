@@ -46,6 +46,8 @@ const MIGRATIONS: &[&str] = &[
     // v3: channels imported from the user's YouTube subscriptions. A channel
     // can be a favorite, a subscription or both; it stays while either holds.
     "ALTER TABLE channels ADD COLUMN subscribed INTEGER NOT NULL DEFAULT 0;",
+    // v4: where each video was left off.
+    crate::progress::MIGRATION,
 ];
 
 pub fn open(path: &Path) -> Result<Connection> {

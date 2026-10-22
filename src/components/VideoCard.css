@@ -23,6 +23,21 @@
   transform: scale(1.03);
 }
 
+.watched-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--thumb-track);
+}
+.watched-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left;
+}
+
 .badge-new {
   position: absolute;
   top: 8px;
