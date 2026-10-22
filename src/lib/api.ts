@@ -53,6 +53,31 @@ export type WatchInfo = {
   isFavorite: boolean;
 };
 
+export type Comment = {
+  id: string;
+  author: string;
+  avatar: string | null;
+  text: string;
+  /** "3 days ago (edited)" */
+  published: string;
+  likes: string | null;
+  replyCount: string | null;
+  /** token for the first page of replies */
+  replies: string | null;
+  pinned: boolean;
+  verified: boolean;
+  /** written by the video's channel */
+  creator: boolean;
+};
+
+export type CommentsPage = {
+  count: string | null;
+  sort: { title: string; token: string }[];
+  comments: Comment[];
+  next: string | null;
+  disabled: boolean;
+};
+
 export type SponsorSegment = { category: string; start: number; end: number };
 
 export const api = {
@@ -64,6 +89,9 @@ export const api = {
   streamIndex: (key: string) => invoke<TrackIndex>("stream_index", { key }),
   sponsorSegments: (id: string) => invoke<SponsorSegment[]>("sponsor_segments", { id }),
   openInMpv: (id: string, title: string, start: number) => invoke<void>("open_in_mpv", { id, title, start }),
+  comments: (id: string) => invoke<CommentsPage>("comments", { id }),
+  /** Next page, another sort order, or a thread's replies. */
+  commentsMore: (token: string) => invoke<CommentsPage>("comments_more", { token }),
   markWatched: (id: string) => invoke<void>("mark_watched", { id }),
   ytdlpVersion: () => invoke<string>("ytdlp_version"),
   /** Runs `yt-dlp -U`; resolves with its last line of output. */
