@@ -236,12 +236,14 @@ mod tests {
         assert_eq!(spoken_count("12K"), Some(12_000));
     }
 
-    /// Hits YouTube: `cargo test related::tests::live -- --ignored --nocapture`
+    /// Hits YouTube: `cargo test related::tests::live -- --ignored --nocapture`,
+    /// another video through `RELATED_ID=...`.
     #[tokio::test]
     #[ignore]
     async fn live() {
         let http = crate::net::client();
-        let r = fetch(&http, "dQw4w9WgXcQ").await.unwrap();
+        let id = std::env::var("RELATED_ID").unwrap_or_else(|_| "dQw4w9WgXcQ".into());
+        let r = fetch(&http, &id).await.unwrap();
         for c in &r {
             println!("{} {:?}s {:?} views {} | {}", c.id, c.duration, c.views, c.channel_title, c.title);
         }

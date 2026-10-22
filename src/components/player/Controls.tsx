@@ -40,6 +40,10 @@ type Props = {
   qualities: Track[];
   quality: Track | undefined;
   onQuality: (t: Track) => void;
+  /** Audio tracks, one per language, the original first. */
+  audios: Track[];
+  audio: Track | undefined;
+  onAudio: (t: Track) => void;
   sponsor: SponsorSegment[];
   fullscreen: boolean;
   onFullscreen: () => void;
@@ -307,6 +311,24 @@ export const Controls = memo(function Controls(p: Props) {
                   </button>
                 ))}
                 {p.qualities.length === 0 && <div className="muted small menu-note">360p (fallback)</div>}
+                {p.audios.length > 1 && (
+                  <>
+                    <div className="menu-title">Audio</div>
+                    {p.audios.map((a, i) => (
+                      <button
+                        key={a.key}
+                        onClick={() => {
+                          p.onAudio(a);
+                          setMenu(false);
+                        }}
+                      >
+                        {a.key === p.audio?.key ? <Check size={14} /> : <span className="menu-gap" />}
+                        {a.label ?? a.lang ?? "Unknown"}
+                        {i === 0 && <span className="muted small">original</span>}
+                      </button>
+                    ))}
+                  </>
+                )}
                 <div className="menu-title">Speed</div>
                 <div className="menu-rates">
                   {RATES.map((r) => (
@@ -321,8 +343,9 @@ export const Controls = memo(function Controls(p: Props) {
                 </div>
               </div>
             )}
-            <button className="pbtn pill" onClick={() => setMenu(!menu)} title="Quality and speed">
+            <button className="pbtn pill" onClick={() => setMenu(!menu)} title="Quality, audio and speed">
               {p.quality ? qualityLabel(p.quality) : "Auto"}
+              {p.audio && p.audio !== p.audios[0] && p.audio.lang && ` · ${p.audio.lang.split("-")[0].toUpperCase()}`}
               {rate !== 1 && ` · ${rate}×`}
               <Settings size={16} />
             </button>

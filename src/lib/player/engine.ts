@@ -127,8 +127,17 @@ export class Engine {
   }
 
   /** Swap the video track (index 0) without losing the current segment. */
-  async switchVideo(src: TrackSource) {
-    const tr = this.tracks[0];
+  switchVideo(src: TrackSource) {
+    return this.switchTrack(0, src, false);
+  }
+
+  /** Swap the audio track (index 1); a new language is heard right away. */
+  switchAudio(src: TrackSource) {
+    return this.switchTrack(1, src, true);
+  }
+
+  private async switchTrack(i: number, src: TrackSource, now: boolean) {
+    const tr = this.tracks[i];
     if (!tr || this.destroyed) return;
     const t = this.video.currentTime;
     tr.restart();
@@ -139,15 +148,17 @@ export class Engine {
     if (src.type !== tr.src.type && "changeType" in tr.sb) tr.sb.changeType(src.type);
     tr.src = src;
     tr.needInit = true;
-    // Keep what plays right now, refill the rest in the new quality.
+    // Quality: keep what plays right now, refill the rest. Language: replace
+    // from the playhead, the segment under it is fetched again.
     const cur = tr.segAt(t);
-    const keepUntil = cur < src.index.segments.length ? src.index.segments[cur].t + src.index.segments[cur].d : t;
+    const segs = src.index.segments;
+    const keepUntil = now ? t : cur < segs.length ? segs[cur].t + segs[cur].d : t;
     try {
       if (keepUntil < this.ms.duration) await tr.op(() => tr.sb.remove(keepUntil, Infinity));
     } catch (e) {
       return this.fail(e);
     }
-    tr.next = cur + 1;
+    tr.next = now ? cur : cur + 1;
     this.pump(tr);
   }
 

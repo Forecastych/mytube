@@ -65,6 +65,10 @@ export type Track = {
   height: number;
   fps: number;
   bitrate: number;
+  /** Audio language, e.g. `en-US`; null on videos with one track. */
+  lang: string | null;
+  /** "English (United States)" */
+  label: string | null;
 };
 
 export type Chapter = { startTime: number; endTime: number; title: string };
@@ -83,7 +87,8 @@ export type WatchInfo = {
   isLive: boolean;
   chapters: Chapter[];
   video: Track[];
-  audio: Track | null;
+  /** One per language, the original first; empty when there's no DASH audio. */
+  audio: Track[];
   progressive: Track | null;
   isFavorite: boolean;
 };
@@ -123,7 +128,9 @@ export const api = {
   watchInfo: (id: string, force = false) => invoke<WatchInfo>("watch_info", { id, force }),
   streamIndex: (key: string) => invoke<TrackIndex>("stream_index", { key }),
   sponsorSegments: (id: string) => invoke<SponsorSegment[]>("sponsor_segments", { id }),
-  openInMpv: (id: string, title: string, start: number) => invoke<void>("open_in_mpv", { id, title, start }),
+  /** `audio`: key of the audio track to play instead of the original. */
+  openInMpv: (id: string, title: string, start: number, audio?: string) =>
+    invoke<void>("open_in_mpv", { id, title, start, audio }),
   comments: (id: string) => invoke<CommentsPage>("comments", { id }),
   /** Next page, another sort order, or a thread's replies. */
   commentsMore: (token: string) => invoke<CommentsPage>("comments_more", { token }),

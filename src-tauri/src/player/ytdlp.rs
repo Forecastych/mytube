@@ -55,7 +55,11 @@ pub struct Format {
     pub fps: Option<f64>,
     pub tbr: Option<f64>,
     pub dynamic_range: Option<String>,
+    /// Audio language, e.g. `en-US`; set on videos with dubbed tracks.
+    pub language: Option<String>,
     pub language_preference: Option<i64>,
+    /// `English (United States) original (default), medium`
+    pub format_note: Option<String>,
     pub has_drm: Option<bool>,
     pub http_headers: HashMap<String, String>,
 }

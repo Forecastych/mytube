@@ -156,8 +156,14 @@ pub async fn sponsor_segments(state: State<'_, AppState>, id: String) -> Result<
 }
 
 #[tauri::command]
-pub fn open_in_mpv(state: State<'_, AppState>, id: String, title: String, start: f64) -> Result<()> {
-    player::open_in_mpv(&state.player, &id, &title, start)
+pub fn open_in_mpv(
+    state: State<'_, AppState>,
+    id: String,
+    title: String,
+    start: f64,
+    audio: Option<String>,
+) -> Result<()> {
+    player::open_in_mpv(&state.player, &id, &title, start, audio.as_deref())
 }
 
 #[tauri::command]

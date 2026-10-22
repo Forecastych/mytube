@@ -11,6 +11,8 @@ export type Prefs = {
   /** Preferred video height; the closest available one is picked. */
   quality: number;
   rate: number;
+  /** Preferred dub language, e.g. `de-DE`; empty = the original audio. */
+  audioLang: string;
   sponsorBlock: boolean;
   /** SponsorBlock categories skipped without asking. */
   skipCategories: string[];
@@ -29,6 +31,7 @@ export const defaults: Prefs = {
   muted: false,
   quality: 1080,
   rate: 1,
+  audioLang: "",
   sponsorBlock: true,
   skipCategories: ["sponsor", "selfpromo", "interaction"],
   upNextOpen: true,

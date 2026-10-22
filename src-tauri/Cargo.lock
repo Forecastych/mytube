@@ -2467,7 +2467,7 @@ dependencies = [
 
 [[package]]
 name = "mytube"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "getrandom 0.4.3",
  "keyring",

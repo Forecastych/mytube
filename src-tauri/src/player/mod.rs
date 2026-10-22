@@ -42,6 +42,10 @@ pub struct Track {
     pub height: u32,
     pub fps: u32,
     pub bitrate: u32,
+    /// Audio only: `en-US`, `ru`...
+    pub lang: Option<String>,
+    /// Audio only: "English (United States) original".
+    pub label: Option<String>,
 }
 
 #[derive(Serialize, Clone)]
@@ -61,7 +65,9 @@ pub struct WatchInfo {
     /// MP4 (H.264 / AV1) video-only tracks, best first. The page drops the
     /// ones the webview can't decode.
     pub video: Vec<Track>,
-    pub audio: Option<Track>,
+    /// M4A audio, one per language (dubbed videos have several), the
+    /// original first.
+    pub audio: Vec<Track>,
     /// Muxed 360p MP4: plays in a bare `<video src>` if MSE fails.
     pub progressive: Option<Track>,
 }
@@ -94,7 +100,42 @@ fn track(video_id: &str, f: &Format, mime: &'static str, codec: &str) -> Track {
         height: f.height.unwrap_or(0),
         fps: f.fps.unwrap_or(0.0).round() as u32,
         bitrate: (f.tbr.unwrap_or(0.0) * 1000.0) as u32,
+        lang: None,
+        label: None,
     }
+}
+
+fn kbps(f: &Format) -> i64 {
+    (f.tbr.unwrap_or(0.0) * 1000.0) as i64
+}
+
+/// Best M4A per language; the original (yt-dlp's highest language
+/// preference) first, the rest by name. DRC variants only when nothing else.
+fn audio_tracks<'a>(direct: &[&'a Format]) -> Vec<&'a Format> {
+    let rank = |f: &Format| (!f.format_id.contains("drc"), kbps(f));
+    let mut best: Vec<&Format> = Vec::new();
+    let m4a = direct.iter().filter(|f| f.vcodec().is_empty() && f.acodec().starts_with("mp4a") && f.ext.as_deref() == Some("m4a"));
+    for f in m4a {
+        match best.iter_mut().find(|b| b.language == f.language) {
+            Some(b) if rank(f) > rank(b) => *b = f,
+            Some(_) => {}
+            None => best.push(f),
+        }
+    }
+    best.sort_by_cached_key(|f| (std::cmp::Reverse(f.language_preference.unwrap_or(-1)), audio_label(f)));
+    best
+}
+
+/// The track's name from yt-dlp's note: "English (United States) original
+/// (default), medium" -> "English (United States) original". A note without a
+/// name starts with the quality; then the language code stands in.
+fn audio_label(f: &Format) -> Option<String> {
+    let lang = f.language.as_deref()?;
+    let first = f.format_note.as_deref().unwrap_or_default().split(", ").next().unwrap_or_default();
+    let name = first.replace("(default)", "").replace("(original)", "");
+    let name = name.split_whitespace().collect::<Vec<_>>().join(" ");
+    let quality = matches!(name.as_str(), "" | "ultralow" | "low" | "medium" | "high");
+    Some(if quality { lang.to_owned() } else { name })
 }
 
 impl Player {
@@ -174,10 +215,10 @@ fn build(raw: Info) -> Built {
         direct
             .iter()
             .filter(|f| f.vcodec().is_empty() && !f.acodec().is_empty() && pred(f))
-            .max_by_key(|f| (f.language_preference.unwrap_or(-1), (f.tbr.unwrap_or(0.0) * 1000.0) as i64))
+            .max_by_key(|f| (f.language_preference.unwrap_or(-1), kbps(f)))
             .copied()
     };
-    let audio = best_audio(&|f| f.acodec().starts_with("mp4a") && f.ext.as_deref() == Some("m4a"));
+    let audio = audio_tracks(&direct);
 
     let progressive = direct
         .iter()
@@ -185,7 +226,7 @@ fn build(raw: Info) -> Built {
         .max_by_key(|f| f.height.unwrap_or(0))
         .copied();
 
-    for f in video.iter().map(|(f, _)| *f).chain(audio).chain(progressive) {
+    for f in video.iter().map(|(f, _)| *f).chain(audio.iter().copied()).chain(progressive) {
         sources.push((format!("{id}.{}", f.format_id), source(f)));
     }
 
@@ -211,7 +252,10 @@ fn build(raw: Info) -> Built {
         is_live: raw.is_live.unwrap_or(false),
         chapters: raw.chapters.unwrap_or_default(),
         video: video.into_iter().map(|(_, t)| t).collect(),
-        audio: audio.map(|f| track(&id, f, "audio/mp4", f.acodec())),
+        audio: audio
+            .iter()
+            .map(|f| Track { lang: f.language.clone(), label: audio_label(f), ..track(&id, f, "audio/mp4", f.acodec()) })
+            .collect(),
         progressive: progressive.map(|f| track(&id, f, "video/mp4", f.vcodec())),
         id,
     };
@@ -227,18 +271,21 @@ fn mpv_binary() -> std::path::PathBuf {
     on_path.unwrap_or(default)
 }
 
-pub fn open_in_mpv(player: &Player, video_id: &str, title: &str, start: f64) -> Result<()> {
+/// `audio`: the stream key of the track picked in the player, if any.
+pub fn open_in_mpv(player: &Player, video_id: &str, title: &str, start: f64, audio: Option<&str>) -> Result<()> {
     if !is_video_id(video_id) {
         return Err(Error::msg("Bad video id"));
     }
     let mut cmd = std::process::Command::new(mpv_binary());
     cmd.arg(format!("--force-media-title={title}")).arg(format!("--start={}", start.max(0.0).floor()));
     match player.mpv_sources(video_id) {
-        Some((video, audio)) => {
+        Some((video, audio_src)) => {
             if let Some(ua) = video.headers.iter().find(|(k, _)| k.eq_ignore_ascii_case("user-agent")) {
                 cmd.arg(format!("--user-agent={}", ua.1));
             }
-            if let Some(a) = audio {
+            // A muxed video has no separate audio to swap.
+            let picked = audio.filter(|k| k.starts_with(&format!("{video_id}."))).and_then(|k| player.source(k));
+            if let Some(a) = audio_src.map(|a| picked.unwrap_or(a)) {
                 cmd.arg(format!("--audio-file={}", a.url));
             }
             cmd.arg("--ytdl=no").arg("--").arg(video.url);
@@ -259,4 +306,56 @@ pub fn open_in_mpv(player: &Player, video_id: &str, title: &str, start: f64) -> 
         }
     })?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn audio(id: &str, lang: Option<&str>, pref: i64, tbr: f64, note: &str) -> Format {
+        Format {
+            format_id: id.into(),
+            url: Some("https://x".into()),
+            protocol: Some("https".into()),
+            ext: Some("m4a".into()),
+            vcodec: Some("none".into()),
+            acodec: Some("mp4a.40.2".into()),
+            tbr: Some(tbr),
+            language: lang.map(Into::into),
+            language_preference: Some(pref),
+            format_note: Some(note.into()),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn one_track_per_language_original_first() {
+        let formats = [
+            audio("139-0", Some("ru"), -1, 48.0, "Russian, low"),
+            audio("140-0", Some("ru"), -1, 129.0, "Russian, medium"),
+            audio("140-1", Some("en-US"), 10, 129.0, "English (United States) original (default), medium"),
+            audio("140-drc", Some("en-US"), 10, 130.0, "English (United States) original (default), medium, DRC"),
+            audio("140-2", Some("de-DE"), -1, 129.0, "German (Germany), medium"),
+        ];
+        let direct: Vec<&Format> = formats.iter().collect();
+        let picked: Vec<(&str, Option<String>)> =
+            audio_tracks(&direct).into_iter().map(|f| (f.format_id.as_str(), audio_label(f))).collect();
+        assert_eq!(
+            picked,
+            [
+                ("140-1", Some("English (United States) original".into())),
+                ("140-2", Some("German (Germany)".into())),
+                ("140-0", Some("Russian".into())),
+            ]
+        );
+    }
+
+    #[test]
+    fn single_track_label_falls_back_to_code() {
+        let f = audio("140", Some("en"), -1, 129.0, "medium");
+        assert_eq!(audio_label(&f).as_deref(), Some("en"));
+        assert_eq!(audio_label(&audio("140", None, -1, 129.0, "medium")), None);
+        let direct = [&f];
+        assert_eq!(audio_tracks(&direct).len(), 1);
+    }
 }

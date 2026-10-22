@@ -31,6 +31,15 @@ function pickQuality(list: Track[]): Track | undefined {
   return list.find((t) => t.height <= want) ?? list[list.length - 1];
 }
 
+/** The dub picked before (same language, or at least the same base one), else the original. */
+function pickAudio(list: Track[]): Track | undefined {
+  const ok = list.filter((t) => Engine.supported(typeOf(t)));
+  const want = pref("audioLang");
+  const base = (l: string | null) => (l ?? "").split("-")[0];
+  const dub = want ? (ok.find((t) => t.lang === want) ?? ok.find((t) => base(t.lang) === base(want))) : undefined;
+  return dub ?? ok[0];
+}
+
 async function source(t: Track): Promise<TrackSource> {
   return { url: streamUrl(t.key), type: typeOf(t), index: await api.streamIndex(t.key) };
 }
@@ -53,6 +62,7 @@ export function Player({ info, startAt, onExpired, videoRef: outer, resumed }: P
   const engineRef = useRef<Engine | null>(null);
   const qualities = useMemo(() => playableQualities(info), [info]);
   const [quality, setQuality] = useState<Track | undefined>(() => pickQuality(qualities));
+  const [audio, setAudio] = useState<Track | undefined>(() => pickAudio(info.audio));
   const [error, setError] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [sponsor, setSponsor] = useState<SponsorSegment[]>([]);
@@ -97,14 +107,16 @@ export function Player({ info, startAt, onExpired, videoRef: outer, resumed }: P
 
     (async () => {
       const q = pickQuality(qualities);
-      if (!q || !info.audio || !Engine.supported(typeOf(info.audio))) {
+      const a = pickAudio(info.audio);
+      setAudio(a);
+      if (!q || !a) {
         if (!progressive()) setError("No playable stream for this video. Try Open in mpv.");
         return;
       }
       try {
-        const [v, a] = await Promise.all([source(q), source(info.audio)]);
+        const srcs = await Promise.all([source(q), source(a)]);
         if (cancelled) return;
-        engineRef.current = new Engine(video, [v, a], startAt, onEngineError);
+        engineRef.current = new Engine(video, srcs, startAt, onEngineError);
         void video.play().catch(() => {});
       } catch (e) {
         if (!cancelled && !progressive()) setError(errorText(e));
@@ -134,6 +146,22 @@ export function Player({ info, startAt, onExpired, videoRef: outer, resumed }: P
       }
     },
     [],
+  );
+
+  const changeAudio = useCallback(
+    async (t: Track) => {
+      setAudio(t);
+      // Picking the original again forgets the dub preference.
+      setPref("audioLang", t === info.audio[0] ? "" : (t.lang ?? ""));
+      const engine = engineRef.current;
+      if (!engine) return;
+      try {
+        await engine.switchAudio(await source(t));
+      } catch (e) {
+        setError(errorText(e));
+      }
+    },
+    [info],
   );
 
   // SponsorBlock: fetched once per video, skipped in Controls' time loop.
@@ -219,8 +247,10 @@ export function Player({ info, startAt, onExpired, videoRef: outer, resumed }: P
     const video = videoRef.current;
     video?.pause();
     // A missing mpv doesn't break this player: say so and keep it.
-    api.openInMpv(info.id, info.title, video?.currentTime ?? 0).catch((e) => setNotice(errorText(e)));
-  }, [info]);
+    api
+      .openInMpv(info.id, info.title, video?.currentTime ?? 0, audio?.key)
+      .catch((e) => setNotice(errorText(e)));
+  }, [info, audio]);
 
   return (
     <div ref={boxRef} className={`player${fullscreen ? " fs" : ""}`}>
@@ -245,6 +275,9 @@ export function Player({ info, startAt, onExpired, videoRef: outer, resumed }: P
           qualities={qualities}
           quality={quality}
           onQuality={changeQuality}
+          audios={info.audio}
+          audio={audio}
+          onAudio={changeAudio}
           sponsor={sponsor}
           fullscreen={fullscreen}
           onFullscreen={toggleFullscreen}
