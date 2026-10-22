@@ -1,25 +1,27 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Flame, Inbox, RotateCw, Star } from "lucide-react";
+import { Flame, Inbox, LayoutGrid, RotateCw, Star } from "lucide-react";
 import { AddChannel } from "../components/AddChannel";
 import { FavoritesRow } from "../components/FavoritesRow";
 import { VideoCard } from "../components/VideoCard";
+import { errorText } from "../lib/api";
 import { refresh, useFavorites } from "../lib/favorites";
+import { cachedHome, homeFeed, type HomeFeed, type Source } from "../lib/feed";
 import "./Home.css";
 
 const NEW_LIMIT = 12;
 
-const sources = [
-  { id: "subscriptions", label: "Subscriptions", icon: Inbox, empty: "Sign in with YouTube in Settings to import your subscriptions." },
-  { id: "trending", label: "Trending", icon: Flame, empty: "Trending lands with sign-in." },
-  { id: "related", label: "Related to favorites", icon: Star, empty: "Related videos are coming soon." },
-] as const;
+const sources: { id: Source | null; label: string; icon: typeof Inbox }[] = [
+  { id: null, label: "All", icon: LayoutGrid },
+  { id: "subscriptions", label: "Subscriptions", icon: Inbox },
+  { id: "trending", label: "Trending", icon: Flame },
+  { id: "related", label: "Related to favorites", icon: Star },
+];
 
 export default function Home() {
   const { channels, videos, failed, loading, loaded, error } = useFavorites();
-  const [source, setSource] = useState<(typeof sources)[number]["id"]>("subscriptions");
+  const [source, setSource] = useState<Source | null>(null);
   const fresh = useMemo(() => videos.filter((v) => v.isNew).slice(0, NEW_LIMIT), [videos]);
-  const active = sources.find((s) => s.id === source)!;
 
   if (loaded && channels.length === 0) {
     return (
@@ -71,14 +73,65 @@ export default function Home() {
       <section>
         <div className="chips">
           {sources.map(({ id, label, icon: Icon }) => (
-            <button key={id} className={`chip glass${id === source ? " active" : ""}`} onClick={() => setSource(id)}>
+            <button key={label} className={`chip glass${id === source ? " active" : ""}`} onClick={() => setSource(id)}>
               <Icon size={16} />
               {label}
             </button>
           ))}
         </div>
-        <p className="muted">{active.empty}</p>
+        <Mixed source={source} />
       </section>
     </div>
+  );
+}
+
+/** The grid under the chips: the Feed mix, or one source alone. */
+function Mixed({ source }: { source: Source | null }) {
+  const [feed, setFeed] = useState<HomeFeed | undefined>(() => cachedHome(source));
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const shown = useRef(source);
+  shown.current = source;
+
+  useEffect(() => {
+    setFeed(cachedHome(source));
+    setError(null);
+    if (source === "related") return;
+    setLoading(true);
+    homeFeed(source)
+      .then((f) => shown.current === source && setFeed(f))
+      .catch((e) => shown.current === source && setError(errorText(e)))
+      .finally(() => shown.current === source && setLoading(false));
+  }, [source]);
+
+  if (source === "related") return <p className="muted">Related videos are coming soon.</p>;
+  if (error) return <div className="form-error">{error}</div>;
+  if (!feed) return <p className="muted">{loading ? "Building your feed…" : ""}</p>;
+
+  const signIn = (what: string) => (
+    <p className="muted">
+      Sign in with Google in <Link to="/settings">Settings</Link> to {what}.
+    </p>
+  );
+  return (
+    <>
+      {feed.notice && <p className="muted small">{feed.notice}</p>}
+      {source === "subscriptions" && !feed.signedIn && feed.subscriptions === 0 && signIn("import your subscriptions")}
+      {source === "trending" && !feed.signedIn && signIn("see what's trending")}
+      {feed.hidden > 0 && (
+        <p className="muted small">
+          {feed.hidden} hidden by your <Link to="/algorithm">filters</Link>
+        </p>
+      )}
+      {feed.videos.length > 0 ? (
+        <div className="grid">
+          {feed.videos.map((v) => (
+            <VideoCard key={v.id} v={v} />
+          ))}
+        </div>
+      ) : (
+        !(source === "trending" && !feed.signedIn) && <p className="muted">{loading ? "Loading…" : "Nothing here yet."}</p>
+      )}
+    </>
   );
 }

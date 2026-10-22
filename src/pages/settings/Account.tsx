@@ -1,7 +1,9 @@
 // Settings → Account: the user's own Google Cloud client, then sign-in.
 import { useState, type FormEvent } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { ExternalLink, LogIn, LogOut, UserRound } from "lucide-react";
+import { Download, ExternalLink, LogIn, LogOut, UserRound } from "lucide-react";
+import { errorText } from "../../lib/api";
+import { syncSubscriptions } from "../../lib/feed";
 import { cancelSignIn, forgetClient, saveClient, signIn, signOut, useGoogle } from "../../lib/google";
 import { Card, Row } from "./parts";
 
@@ -41,7 +43,9 @@ export function Account() {
             <LogOut size={15} /> Sign out
           </button>
         </div>
-      ) : status.clientId && !editing ? (
+      ) : null}
+      {account && <Subscriptions />}
+      {account ? null : status.clientId && !editing ? (
         <Row
           label="Google account"
           hint={signingIn ? "Finish signing in in your browser, then come back here." : "Opens your browser. Google asks once whether MyTube may read your YouTube."}
@@ -51,7 +55,7 @@ export function Account() {
               Cancel
             </button>
           ) : (
-            <button className="btn btn-primary" onClick={() => void signIn()} disabled={busy}>
+            <button className="btn btn-primary" onClick={() => void signIn().then((ok) => ok && void syncSubscriptions().catch(() => {}))} disabled={busy}>
               <LogIn size={15} /> Sign in with Google
             </button>
           )}
@@ -79,6 +83,32 @@ export function Account() {
       )}
       {error && <p className="small settings-status error">{error}</p>}
     </Card>
+  );
+}
+
+function Subscriptions() {
+  const [state, setState] = useState<{ busy: boolean; note: string | null; error: boolean }>({ busy: false, note: null, error: false });
+  async function sync() {
+    setState({ busy: true, note: null, error: false });
+    try {
+      const n = await syncSubscriptions();
+      setState({ busy: false, note: `${n} channel${n === 1 ? "" : "s"} imported.`, error: false });
+    } catch (e) {
+      setState({ busy: false, note: errorText(e), error: true });
+    }
+  }
+  return (
+    <>
+      <Row
+        label="Subscriptions"
+        hint="Imported once a day on their own and shown on Home. They stay after you sign out: new videos come through RSS."
+      >
+        <button className="btn" onClick={() => void sync()} disabled={state.busy}>
+          <Download size={15} /> {state.busy ? "Importing…" : "Import now"}
+        </button>
+      </Row>
+      {state.note && <p className={`small settings-status${state.error ? " error" : ""}`}>{state.note}</p>}
+    </>
   );
 }
 

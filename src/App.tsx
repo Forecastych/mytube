@@ -5,7 +5,6 @@ import { GlassFilter } from "./components/GlassFilter";
 import { Header } from "./components/Header";
 import { Sidebar } from "./components/Sidebar";
 import { VideoMenu } from "./components/VideoMenu";
-import { Placeholder } from "./pages/Placeholder";
 import "./App.css";
 
 // Screens load on first visit: keeps the startup bundle small.
@@ -15,6 +14,7 @@ const Watch = lazy(() => import("./pages/Watch"));
 const Algorithm = lazy(() => import("./pages/Algorithm"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Search = lazy(() => import("./pages/Search"));
+const Trending = lazy(() => import("./pages/Trending"));
 
 export default function App() {
   return (
@@ -30,7 +30,7 @@ export default function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/favorites" element={<Favorites />} />
-                  <Route path="/trending" element={<Placeholder title="Trending" note="By region and category." />} />
+                  <Route path="/trending" element={<Trending />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/algorithm" element={<Algorithm />} />
                   <Route path="/settings" element={<Settings />} />
