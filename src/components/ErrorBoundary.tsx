@@ -3,7 +3,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { RotateCw } from "lucide-react";
-import "../pages/Placeholder.css";
 
 type State = { error: Error | null };
 
