@@ -52,12 +52,15 @@ pub fn run() {
             feed::commands::algorithm_get,
             feed::commands::algorithm_set,
             feed::commands::blocked_channel_resolve,
+            feed::commands::home_feed,
             google::commands::google_status,
             google::commands::google_set_client,
             google::commands::google_sign_in,
             google::commands::google_sign_in_cancel,
             google::commands::google_sign_out,
             google::commands::google_forget_client,
+            google::commands::subscriptions_sync,
+            google::commands::trending,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

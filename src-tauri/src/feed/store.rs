@@ -1,5 +1,5 @@
-//! Rules and feed candidates in SQLite. Tables come from schema v2 in
-//! `db::MIGRATIONS` (`settings`, `videos.duration`, `videos.category`).
+//! Rules and feed candidates in SQLite. Tables come from `db::MIGRATIONS`
+//! (v2: `settings`, `videos.duration`, `videos.category`; v3: `channels.subscribed`).
 
 use rusqlite::{params, Connection, OptionalExtension};
 
@@ -38,16 +38,27 @@ pub fn save_rules(conn: &Connection, mut rules: Rules) -> Result<Rules> {
 /// Cached uploads of favorite channels, newest first, before any filtering.
 /// A video is NEW if published after `new_since` and not watched.
 pub fn favorite_candidates(conn: &Connection, new_since: i64, limit: u32) -> Result<Vec<Candidate>> {
-    let mut stmt = conn.prepare_cached(
+    candidates(conn, "c.favorite = 1", Source::Favorites, new_since, limit)
+}
+
+/// Cached uploads of subscriptions that aren't favorites (those already
+/// come as favorites), newest first.
+pub fn subscription_candidates(conn: &Connection, new_since: i64, limit: u32) -> Result<Vec<Candidate>> {
+    candidates(conn, "c.subscribed = 1 AND c.favorite = 0", Source::Subscriptions, new_since, limit)
+}
+
+/// `channels` is one of the fixed clauses above, never user input.
+fn candidates(conn: &Connection, channels: &str, source: Source, new_since: i64, limit: u32) -> Result<Vec<Candidate>> {
+    let mut stmt = conn.prepare_cached(&format!(
         "SELECT v.id, v.channel_id, c.title, c.avatar, v.title, v.published, v.views,
                 v.duration, v.category, v.is_short, w.video_id IS NOT NULL, c.position
            FROM videos v
            JOIN channels c ON c.id = v.channel_id
            LEFT JOIN watched w ON w.video_id = v.id
-          WHERE c.favorite = 1
+          WHERE {channels}
           ORDER BY v.published DESC
-          LIMIT ?1",
-    )?;
+          LIMIT ?1"
+    ))?;
     let rows = stmt.query_map([limit], |r| {
         let published: i64 = r.get(5)?;
         let watched: bool = r.get(10)?;
@@ -63,9 +74,9 @@ pub fn favorite_candidates(conn: &Connection, new_since: i64, limit: u32) -> Res
             category: r.get(8)?,
             is_short: r.get(9)?,
             is_new: published > new_since && !watched,
-            source: Source::Favorites,
+            source,
             watched,
-            channel_rank: r.get(11)?,
+            channel_rank: if source == Source::Favorites { r.get(11)? } else { None },
         })
     })?;
     Ok(rows.collect::<rusqlite::Result<_>>()?)
@@ -75,13 +86,13 @@ pub fn favorite_candidates(conn: &Connection, new_since: i64, limit: u32) -> Res
 mod tests {
     use super::*;
 
-    /// v1 + v2 as `db::MIGRATIONS` will have them.
+    /// v1–v3 as `db::MIGRATIONS` has them.
     fn conn() -> Connection {
         let c = Connection::open_in_memory().unwrap();
         c.execute_batch(
             "CREATE TABLE channels (id TEXT PRIMARY KEY, title TEXT NOT NULL, avatar TEXT,
                  favorite INTEGER NOT NULL DEFAULT 0, position INTEGER NOT NULL DEFAULT 0,
-                 fetched_at INTEGER NOT NULL DEFAULT 0);
+                 fetched_at INTEGER NOT NULL DEFAULT 0, subscribed INTEGER NOT NULL DEFAULT 0);
              CREATE TABLE videos (id TEXT PRIMARY KEY, channel_id TEXT NOT NULL, title TEXT NOT NULL,
                  published INTEGER NOT NULL, views INTEGER, is_short INTEGER NOT NULL);
              CREATE TABLE watched (video_id TEXT PRIMARY KEY, watched_at INTEGER NOT NULL);
@@ -117,5 +128,19 @@ mod tests {
         let got: Vec<_> = v.iter().map(|c| (c.id.as_str(), c.is_new, c.watched)).collect();
         assert_eq!(got, [("new", true, false), ("seen", false, true), ("old", false, false)]);
         assert_eq!(v[0].channel_rank, Some(3));
+    }
+
+    #[test]
+    fn subscriptions_exclude_favorites() {
+        let c = conn();
+        c.execute_batch(
+            "INSERT INTO channels (id, title, favorite, subscribed) VALUES ('UCs', 'S', 0, 1), ('UCf', 'F', 1, 1);
+             INSERT INTO videos (id, channel_id, title, published, is_short) VALUES
+                 ('s1', 'UCs', 's', 200, 0), ('f1', 'UCf', 'f', 300, 0);",
+        )
+        .unwrap();
+        let v = subscription_candidates(&c, 0, 50).unwrap();
+        assert_eq!(v.iter().map(|c| c.id.as_str()).collect::<Vec<_>>(), ["s1"]);
+        assert_eq!((v[0].source, v[0].channel_rank), (Source::Subscriptions, None));
     }
 }

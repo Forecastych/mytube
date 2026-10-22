@@ -82,8 +82,21 @@ pub async fn favorites_feed(state: State<'_, AppState>, force: bool) -> Result<F
     let ttl = if force { RSS_MIN_SECS } else { RSS_TTL_SECS };
     let stale = db::stale_favorites(&*lock(&state)?, t - ttl)?;
 
+    let failed = refresh_rss(&state, stale, t).await?;
+
+    let conn = lock(&state)?;
+    let rules = store::load_rules(&conn)?;
+    let pool = store::favorite_candidates(&conn, t - NEW_WINDOW_SECS, FEED_POOL)?;
+    let mut feed = rank::filter(pool, &rules);
+    feed.videos.truncate(FEED_LIMIT);
+    Ok(FavoritesFeed { videos: feed.videos, hidden: feed.hidden, failed })
+}
+
+/// Fetches RSS for `ids` a few at a time and caches it. Returns the ids that
+/// failed; their cached videos stay.
+pub(crate) async fn refresh_rss(state: &AppState, ids: Vec<String>, t: i64) -> Result<Vec<String>> {
     let sem = Arc::new(Semaphore::new(RSS_PARALLEL));
-    let tasks: Vec<_> = stale
+    let tasks: Vec<_> = ids
         .into_iter()
         .map(|id| {
             let http = state.http.clone();
@@ -100,20 +113,14 @@ pub async fn favorites_feed(state: State<'_, AppState>, force: bool) -> Result<F
     for task in tasks {
         let Ok((id, res)) = task.await else { continue };
         match res {
-            Ok(feed) => db::store_feed(&mut *lock(&state)?, &id, &feed, t)?,
+            Ok(feed) => db::store_feed(&mut *lock(state)?, &id, &feed, t)?,
             Err(e) => {
                 eprintln!("rss {id}: {e}");
                 failed.push(id);
             }
         }
     }
-
-    let conn = lock(&state)?;
-    let rules = store::load_rules(&conn)?;
-    let pool = store::favorite_candidates(&conn, t - NEW_WINDOW_SECS, FEED_POOL)?;
-    let mut feed = rank::filter(pool, &rules);
-    feed.videos.truncate(FEED_LIMIT);
-    Ok(FavoritesFeed { videos: feed.videos, hidden: feed.hidden, failed })
+    Ok(failed)
 }
 
 #[derive(Serialize)]

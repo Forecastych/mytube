@@ -8,7 +8,9 @@ use tokio::net::TcpListener;
 use tokio::sync::oneshot;
 
 use super::vault::{self, Client};
-use super::{api, oauth, GoogleState};
+use super::{api, oauth, subscriptions, trending, GoogleState};
+use crate::feed::rank::{self, Ranked};
+use crate::feed::store;
 use crate::commands::AppState;
 use crate::error::{Error, Result};
 
@@ -160,6 +162,44 @@ pub async fn google_forget_client(state: State<'_, AppState>, google: State<'_, 
     google_sign_out(state.clone(), google.clone()).await?;
     vault::clear_client()?;
     status(&state)
+}
+
+fn now() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
+}
+
+/// Imports the subscription list (not the videos: those come from RSS on
+/// Home). Returns how many channels the user is subscribed to.
+pub async fn sync_subscriptions(state: &AppState, google: &GoogleState) -> Result<u32> {
+    let token = google.access_token(&state.http).await?;
+    let subs = subscriptions::fetch(&state.http, &token).await?;
+    let mut conn = lock(state)?;
+    subscriptions::store(&mut conn, &subs, now())?;
+    subscriptions::count(&conn)
+}
+
+#[tauri::command]
+pub async fn subscriptions_sync(state: State<'_, AppState>, google: State<'_, GoogleState>) -> Result<u32> {
+    sync_subscriptions(&state, &google).await
+}
+
+/// A chart after the Algorithm rules, in chart order.
+#[tauri::command]
+pub async fn trending(
+    state: State<'_, AppState>,
+    google: State<'_, GoogleState>,
+    region: String,
+    category: Option<u32>,
+) -> Result<Ranked> {
+    if !trending::valid_region(&region) {
+        return Err(Error::msg("Bad region"));
+    }
+    trending::check_category(category)?;
+    let chart = google.chart(&state.http, &region, category).await?;
+    let conn = lock(&state)?;
+    trending::save_region(&conn, &region)?;
+    let rules = store::load_rules(&conn)?;
+    Ok(rank::filter(chart, &rules))
 }
 
 #[cfg(test)]
