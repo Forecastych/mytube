@@ -10,11 +10,14 @@ export type Source = (typeof SOURCES)[number];
 export type Mix = Record<Source, number>;
 
 export type BlockedChannel = { id: string; title: string; avatar: string | null };
+export type BlockedVideo = { id: string; title: string };
 
 export type Rules = {
   blockedTopics: string[];
   blockedWords: string[];
   blockedChannels: BlockedChannel[];
+  /** Absent until the backend stores it; the card menu checks for it. */
+  blockedVideos?: BlockedVideo[];
   mix: Mix;
   hideShorts: boolean;
   /** 0 = off */
@@ -64,18 +67,17 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-let loading = false;
-async function load() {
-  if (loading || state.rules) return;
-  loading = true;
-  try {
-    const v = await cmd.get();
-    set({ rules: v.rules, topics: v.topics, preview: v.preview, error: null });
-  } catch (e) {
-    set({ error: errorText(e) });
-  } finally {
-    loading = false;
-  }
+let loading: Promise<void> | null = null;
+function load() {
+  if (state.rules) return Promise.resolve();
+  loading ??= cmd
+    .get()
+    .then(
+      (v) => set({ rules: v.rules, topics: v.topics, preview: v.preview, error: null }),
+      (e) => set({ error: errorText(e) }),
+    )
+    .finally(() => (loading = null));
+  return loading;
 }
 
 const SAVE_DELAY_MS = 400;
@@ -113,6 +115,31 @@ export async function blockChannel(input: string) {
   if (list.some((c) => c.id === ch.id)) throw `${ch.title} is already blocked`;
   updateRules({ blockedChannels: [...list, ch] });
   return ch;
+}
+
+/** Rules loaded on demand, for callers outside the Algorithm screen. Throws a user-readable string. */
+async function loadedRules() {
+  await load();
+  if (!state.rules) throw state.error ?? "Couldn't load the feed rules";
+  return state.rules;
+}
+
+/** Block or unblock a channel whose id is already known (the card menu). */
+export async function setChannelBlocked(ch: BlockedChannel, blocked: boolean) {
+  const list = (await loadedRules()).blockedChannels.filter((c) => c.id !== ch.id);
+  updateRules({ blockedChannels: blocked ? [...list, ch] : list });
+}
+
+/** False until the backend knows about blocked videos. */
+export async function canBlockVideos() {
+  return (await loadedRules().catch(() => null))?.blockedVideos != null;
+}
+
+export async function setVideoBlocked(v: BlockedVideo, blocked: boolean) {
+  const rules = await loadedRules();
+  if (!rules.blockedVideos) throw "Blocking single videos isn't available yet";
+  const list = rules.blockedVideos.filter((x) => x.id !== v.id);
+  updateRules({ blockedVideos: blocked ? [...list, v] : list });
 }
 
 export function useAlgorithm() {

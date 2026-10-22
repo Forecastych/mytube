@@ -3,6 +3,7 @@ import { HashRouter, Route, Routes } from "react-router-dom";
 import { GlassFilter } from "./components/GlassFilter";
 import { Header } from "./components/Header";
 import { Sidebar } from "./components/Sidebar";
+import { VideoMenu } from "./components/VideoMenu";
 import { Placeholder } from "./pages/Placeholder";
 import "./App.css";
 
@@ -36,6 +37,7 @@ export default function App() {
           </div>
         </main>
       </div>
+      <VideoMenu />
     </HashRouter>
   );
 }

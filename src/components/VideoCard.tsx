@@ -2,11 +2,14 @@ import { memo } from "react";
 import { Link } from "react-router-dom";
 import { thumb, type Video } from "../lib/api";
 import { ago, views } from "../lib/format";
+import { useHidden } from "../lib/hidden";
+import { openVideoMenu } from "./VideoMenu";
 import "./VideoCard.css";
 
 export const VideoCard = memo(function VideoCard({ v, badge }: { v: Video; badge?: boolean }) {
+  if (useHidden(v.id, v.channelId)) return null;
   return (
-    <Link to={`/watch/${v.id}`} className="vcard" title={v.title}>
+    <Link to={`/watch/${v.id}`} className="vcard" title={v.title} onContextMenu={(e) => openVideoMenu(e, v)}>
       <div className="vcard-thumb">
         <img src={thumb(v.id)} alt="" loading="lazy" decoding="async" />
         {badge && v.isNew && <span className="badge-new">NEW</span>}
