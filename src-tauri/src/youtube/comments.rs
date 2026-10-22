@@ -12,10 +12,8 @@ use std::collections::HashMap;
 use serde::Serialize;
 use serde_json::{json, Value};
 
-use crate::error::{Error, Result};
-
-const NEXT: &str = "https://www.youtube.com/youtubei/v1/next?prettyPrint=false";
-pub(super) const CLIENT_VERSION: &str = "2.20251020.01.00";
+use super::innertube::{self, find_all, token_in};
+use crate::error::Result;
 
 #[derive(Serialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
@@ -55,27 +53,9 @@ pub struct Comment {
     pub creator: bool,
 }
 
-async fn post(http: &reqwest::Client, body: Value) -> Result<Value> {
-    let mut body = body;
-    body["context"] = json!({ "client": { "clientName": "WEB", "clientVersion": CLIENT_VERSION, "hl": "en" } });
-    let res = http
-        .post(NEXT)
-        .header("Content-Type", "application/json")
-        .header("X-YouTube-Client-Name", "1")
-        .header("X-YouTube-Client-Version", CLIENT_VERSION)
-        .body(body.to_string())
-        .send()
-        .await?;
-    if !res.status().is_success() {
-        return Err(Error::msg(format!("YouTube answered {} for comments", res.status())));
-    }
-    let bytes = res.bytes().await?;
-    serde_json::from_slice(&bytes).map_err(|e| Error::msg(format!("Bad comments answer: {e}")))
-}
-
 /// First page of a video's comments, in YouTube's default ("Top") order.
 pub async fn first(http: &reqwest::Client, video_id: &str) -> Result<Page> {
-    let watch = post(http, json!({ "videoId": video_id })).await?;
+    let watch = innertube::post(http, "next", json!({ "videoId": video_id }), "comments").await?;
     match section_token(&watch) {
         Some(token) => more(http, &token).await,
         None => Ok(Page { disabled: true, ..Page::default() }),
@@ -84,7 +64,7 @@ pub async fn first(http: &reqwest::Client, video_id: &str) -> Result<Page> {
 
 /// Any continuation: the next page, a sort order, or a thread's replies.
 pub async fn more(http: &reqwest::Client, token: &str) -> Result<Page> {
-    Ok(parse(&post(http, json!({ "continuation": token })).await?))
+    Ok(parse(&innertube::post(http, "next", json!({ "continuation": token }), "comments").await?))
 }
 
 fn section_token(watch: &Value) -> Option<String> {
@@ -160,28 +140,6 @@ fn sort_options(header: &Value) -> Vec<SortOption> {
             })
         })
         .collect()
-}
-
-/// The first `continuationCommand.token` anywhere under `v`.
-pub(super) fn token_in(v: &Value) -> Option<String> {
-    let mut cmds = Vec::new();
-    find_all(v, "continuationCommand", &mut cmds);
-    cmds.iter().find_map(|c| c["token"].as_str()).map(str::to_owned)
-}
-
-pub(super) fn find_all<'a>(v: &'a Value, key: &str, out: &mut Vec<&'a Value>) {
-    match v {
-        Value::Object(map) => {
-            for (k, child) in map {
-                if k == key {
-                    out.push(child);
-                }
-                find_all(child, key, out);
-            }
-        }
-        Value::Array(items) => items.iter().for_each(|c| find_all(c, key, out)),
-        _ => {}
-    }
 }
 
 #[cfg(test)]

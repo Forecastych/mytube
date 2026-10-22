@@ -10,22 +10,28 @@ import "./VideoCard.css";
 export const VideoCard = memo(function VideoCard({ v, badge }: { v: Video; badge?: boolean }) {
   const hidden = useHidden(v.id, v.channelId);
   if (hidden) return null;
+  const channel = `/channel/${v.channelId}`;
+  // The title link stretches over the whole card; the channel links sit above it.
   return (
-    <Link to={`/watch/${v.id}`} className="vcard" title={v.title} onContextMenu={(e) => openVideoMenu(e, v)}>
+    <div className="vcard" title={v.title} onContextMenu={(e) => openVideoMenu(e, v)}>
       <div className="vcard-thumb">
         <img src={thumb(v.id)} alt="" loading="lazy" decoding="async" />
         {badge && v.isNew && <span className="badge-new">NEW</span>}
         <WatchedBar id={v.id} />
       </div>
       <div className="vcard-body">
-        {v.channelAvatar ? (
-          <img className="vcard-avatar" src={v.channelAvatar} alt="" loading="lazy" decoding="async" />
-        ) : (
-          <span className="vcard-avatar" />
-        )}
+        <Link to={channel} className="vcard-avatar" title={v.channelTitle} tabIndex={-1}>
+          {v.channelAvatar && <img src={v.channelAvatar} alt="" loading="lazy" decoding="async" />}
+        </Link>
         <div className="vcard-text">
-          <div className="vcard-title">{v.title}</div>
-          <div className="vcard-meta">{v.channelTitle}</div>
+          <Link to={`/watch/${v.id}`} className="vcard-title">
+            {v.title}
+          </Link>
+          <div className="vcard-meta">
+            <Link to={channel} className="vcard-channel" title={v.channelTitle}>
+              {v.channelTitle}
+            </Link>
+          </div>
           <div className="vcard-meta">
             {views(v.views)}
             {v.views != null && " · "}
@@ -33,7 +39,7 @@ export const VideoCard = memo(function VideoCard({ v, badge }: { v: Video; badge
           </div>
         </div>
       </div>
-    </Link>
+    </div>
   );
 });
 

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import { AddChannel } from "../components/AddChannel";
 import { VideoCard } from "../components/VideoCard";
@@ -20,8 +21,10 @@ export default function Favorites() {
         <ul className="fav-list">
           {channels.map((c) => (
             <li key={c.id} className="fav-pill">
-              {c.avatar && <img src={c.avatar} alt="" decoding="async" />}
-              <span>{c.title}</span>
+              <Link to={`/channel/${c.id}`} className="fav-pill-link" title={`Open ${c.title}`}>
+                {c.avatar && <img src={c.avatar} alt="" decoding="async" />}
+                <span>{c.title}</span>
+              </Link>
               <button
                 className="fav-remove"
                 title={`Remove ${c.title}`}

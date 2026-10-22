@@ -1,13 +1,14 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronUp, ListVideo, RotateCw, Star } from "lucide-react";
-import { api, errorText, thumb, type Video, type WatchInfo } from "../lib/api";
+import { api, errorText, thumb, type Related, type Video, type WatchInfo } from "../lib/api";
 import { addFavorite, removeFavorite, useFavorites } from "../lib/favorites";
 import { ago, clock, views } from "../lib/format";
 import { pref, setPref } from "../lib/prefs";
 import { resumeAt } from "../lib/progress";
 import { Player, PlayerPlaceholder } from "../components/player/Player";
 import { WatchedBar } from "../components/VideoCard";
+import { openVideoMenu } from "../components/VideoMenu";
 import { Linkified, VIDEO_ID } from "./watch/Linkified";
 import { Comments } from "./watch/Comments";
 import "./Watch.css";
@@ -98,7 +99,13 @@ function Watch({ id }: { id: string }) {
         </div>
 
         {info ? (
-          <Player info={info} startAt={load.start || resume} resumed={!load.start && resume > 0} onExpired={onExpired} videoRef={videoRef} />
+          <Player
+            info={info}
+            startAt={load.start || resume}
+            resumed={!load.start && resume > 0}
+            onExpired={onExpired}
+            videoRef={videoRef}
+          />
         ) : (
           <PlayerPlaceholder id={id}>
             {error && (
@@ -170,12 +177,14 @@ const Details = memo(function Details({ info, onSeek }: { info: WatchInfo; onSee
       </div>
 
       <div className="watch-channel">
-        {avatar ? (
-          <img className="watch-avatar" src={avatar} alt="" decoding="async" />
-        ) : (
-          <span className="watch-avatar">{info.channel.slice(0, 1)}</span>
-        )}
-        <div className="watch-channel-name">{info.channel}</div>
+        <ChannelLink id={info.channelId} className="watch-channel-link">
+          {avatar ? (
+            <img className="watch-avatar" src={avatar} alt="" decoding="async" />
+          ) : (
+            <span className="watch-avatar">{info.channel.slice(0, 1)}</span>
+          )}
+          <div className="watch-channel-name">{info.channel}</div>
+        </ChannelLink>
         <span className="spacer" />
         {info.channelId && (
           <button
@@ -214,14 +223,38 @@ const Details = memo(function Details({ info, onSeek }: { info: WatchInfo; onSee
           ))}
         </div>
       )}
-
     </section>
   );
 });
 
+function ChannelLink({ id, className, children }: { id: string | null; className: string; children: React.ReactNode }) {
+  if (!id) return <div className={className}>{children}</div>;
+  return (
+    <Link to={`/channel/${id}`} className={className} title="Open channel">
+      {children}
+    </Link>
+  );
+}
+
+// Going back and forth between videos shouldn't ask again.
+const relatedCache = new Map<string, Promise<Related>>();
+function loadRelated(id: string): Promise<Related> {
+  let p = relatedCache.get(id);
+  if (!p) {
+    p = api.related(id);
+    p.catch(() => relatedCache.delete(id));
+    if (relatedCache.size > 30) relatedCache.delete(relatedCache.keys().next().value!);
+    relatedCache.set(id, p);
+  }
+  return p;
+}
+
 function UpNext({ current, onCollapse }: { current: string; onCollapse: () => void }) {
-  const { videos, loaded } = useFavorites();
-  const list = useMemo(() => videos.filter((v) => v.id !== current).slice(0, UP_NEXT), [videos, current]);
+  const [source, setSource] = useState(() => pref("upNextSource"));
+  const pick = (s: typeof source) => {
+    setSource(s);
+    setPref("upNextSource", s);
+  };
   return (
     <aside className="upnext">
       <div className="upnext-head">
@@ -230,13 +263,15 @@ function UpNext({ current, onCollapse }: { current: string; onCollapse: () => vo
           <ChevronUp size={18} />
         </button>
       </div>
-      <div className="upnext-note muted small">From your favorites</div>
-      {list.map((v) => (
-        <UpNextItem key={v.id} v={v} />
-      ))}
-      {loaded && list.length === 0 && (
-        <p className="muted small">Add channels to favorites to see their new videos here.</p>
-      )}
+      <div className="chips upnext-tabs">
+        <button className={`chip glass${source === "related" ? " active" : ""}`} onClick={() => pick("related")}>
+          Related
+        </button>
+        <button className={`chip glass${source === "favorites" ? " active" : ""}`} onClick={() => pick("favorites")}>
+          Favorites
+        </button>
+      </div>
+      {source === "related" ? <RelatedList current={current} /> : <FavoritesList current={current} />}
       <button className="upnext-collapse" onClick={onCollapse}>
         <ChevronDown size={16} /> Collapse Up next
       </button>
@@ -244,9 +279,49 @@ function UpNext({ current, onCollapse }: { current: string; onCollapse: () => vo
   );
 }
 
+function RelatedList({ current }: { current: string }) {
+  const [state, setState] = useState<{ id: string; list?: Related; error?: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    loadRelated(current).then(
+      (list) => live && setState({ id: current, list }),
+      (e) => live && setState({ id: current, error: errorText(e) }),
+    );
+    return () => {
+      live = false;
+    };
+  }, [current]);
+  if (!state || state.id !== current) return <p className="muted small">Loading…</p>;
+  if (state.error) return <p className="muted small">Couldn't load related videos: {state.error}</p>;
+  const videos = state.list!.videos.slice(0, UP_NEXT);
+  return (
+    <>
+      {videos.map((v) => (
+        <UpNextItem key={v.id} v={v} />
+      ))}
+      {videos.length === 0 && <p className="muted small">Nothing related passed your filters.</p>}
+    </>
+  );
+}
+
+function FavoritesList({ current }: { current: string }) {
+  const { videos, loaded } = useFavorites();
+  const list = useMemo(() => videos.filter((v) => v.id !== current).slice(0, UP_NEXT), [videos, current]);
+  return (
+    <>
+      {list.map((v) => (
+        <UpNextItem key={v.id} v={v} />
+      ))}
+      {loaded && list.length === 0 && (
+        <p className="muted small">Add channels to favorites to see their new videos here.</p>
+      )}
+    </>
+  );
+}
+
 const UpNextItem = memo(function UpNextItem({ v }: { v: Video }) {
   return (
-    <Link to={`/watch/${v.id}`} className="upnext-item" title={v.title}>
+    <Link to={`/watch/${v.id}`} className="upnext-item" title={v.title} onContextMenu={(e) => openVideoMenu(e, v)}>
       <div className="upnext-thumb">
         <img src={thumb(v.id)} alt="" loading="lazy" decoding="async" />
         {v.isNew && <span className="badge-new">NEW</span>}

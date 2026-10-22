@@ -1,7 +1,8 @@
 // Right-click menu for video cards, plus the "Blocked … · Undo" toast it
 // leaves behind. One instance lives in App; cards call `openVideoMenu`.
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
-import { Ban, EyeOff, Link2, MonitorPlay, Star, StarOff } from "lucide-react";
+import { Ban, EyeOff, Link2, MonitorPlay, Star, StarOff, UserRound } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { api, errorText, type Video } from "../lib/api";
 import { setChannelBlocked, setVideoBlocked } from "../lib/algorithm";
 import { addFavorite, removeFavorite, useFavorites } from "../lib/favorites";
@@ -72,6 +73,7 @@ function Menu({ v, x, y, toast }: Open & { toast: (t: Toast) => void }) {
   const [pos, setPos] = useState({ left: x, top: y });
   const { channels } = useFavorites();
   const favorite = channels.some((c) => c.id === v.channelId);
+  const navigate = useNavigate();
 
   // Keep the menu on screen: flip left/up when it would spill over an edge.
   useLayoutEffect(() => {
@@ -170,6 +172,15 @@ function Menu({ v, x, y, toast }: Open & { toast: (t: Toast) => void }) {
         <Ban size={16} /> Block {v.channelTitle}
       </button>
       <div className="vmenu-sep" />
+      <button
+        role="menuitem"
+        onClick={() => {
+          close();
+          navigate(`/channel/${v.channelId}`);
+        }}
+      >
+        <UserRound size={16} /> Go to channel
+      </button>
       <button role="menuitem" onClick={toggleFavorite}>
         {favorite ? <StarOff size={16} /> : <Star size={16} />}
         {favorite ? "Remove channel from favorites" : "Add channel to favorites"}

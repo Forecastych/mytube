@@ -14,14 +14,13 @@ use serde::Serialize;
 use serde_json::{json, Value};
 use tauri::State;
 
-use super::comments::{find_all, token_in, CLIENT_VERSION};
+use super::innertube::{self, find_all, token_in};
 use crate::commands::AppState;
 use crate::error::{Error, Result};
 use crate::feed::rank::{self, Candidate};
 use crate::feed::rules::Source;
 use crate::feed::store;
 
-const SEARCH: &str = "https://www.youtube.com/youtubei/v1/search?prettyPrint=false";
 const MAX_QUERY: usize = 200;
 /// Going back from a video to the results shouldn't ask YouTube again.
 const CACHE_TTL: Duration = Duration::from_secs(10 * 60);
@@ -56,30 +55,13 @@ pub struct SearchPage {
     pub next: Option<String>,
 }
 
-fn now() -> i64 {
+pub(super) fn now() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
 }
 
 fn cache() -> &'static Mutex<HashMap<String, (Instant, Raw)>> {
     static CACHE: OnceLock<Mutex<HashMap<String, (Instant, Raw)>>> = OnceLock::new();
     CACHE.get_or_init(Default::default)
-}
-
-async fn post(http: &reqwest::Client, mut body: Value) -> Result<Value> {
-    body["context"] = json!({ "client": { "clientName": "WEB", "clientVersion": CLIENT_VERSION, "hl": "en" } });
-    let res = http
-        .post(SEARCH)
-        .header("Content-Type", "application/json")
-        .header("X-YouTube-Client-Name", "1")
-        .header("X-YouTube-Client-Version", CLIENT_VERSION)
-        .body(body.to_string())
-        .send()
-        .await?;
-    if !res.status().is_success() {
-        return Err(Error::msg(format!("YouTube answered {} for search", res.status())));
-    }
-    let bytes = res.bytes().await?;
-    serde_json::from_slice(&bytes).map_err(|e| Error::msg(format!("Bad search answer: {e}")))
 }
 
 /// First page for `query`, or the page behind `next`. Rules are applied on
@@ -105,7 +87,7 @@ pub async fn search(state: State<'_, AppState>, query: String, next: Option<Stri
                 Some(token) => json!({ "continuation": token }),
                 None => json!({ "query": query }),
             };
-            let raw = parse(&post(&state.http, body).await?, now());
+            let raw = parse(&innertube::post(&state.http, "search", body, "search").await?, now());
             if let Ok(mut c) = cache().lock() {
                 c.retain(|_, (at, _)| at.elapsed() < CACHE_TTL);
                 if c.len() >= CACHE_SIZE {
@@ -164,7 +146,7 @@ fn parse(v: &Value, now: i64) -> Raw {
 }
 
 /// `{simpleText}` or `{runs: [{text}]}`.
-fn text(v: &Value) -> Option<String> {
+pub(super) fn text(v: &Value) -> Option<String> {
     if let Some(s) = v["simpleText"].as_str() {
         return Some(s.to_owned());
     }
@@ -173,11 +155,11 @@ fn text(v: &Value) -> Option<String> {
     (!s.is_empty()).then_some(s)
 }
 
-fn https(url: &str) -> String {
+pub(super) fn https(url: &str) -> String {
     if url.starts_with("//") { format!("https:{url}") } else { url.to_owned() }
 }
 
-fn last_thumb(v: &Value) -> Option<String> {
+pub(super) fn last_thumb(v: &Value) -> Option<String> {
     v["thumbnails"].as_array()?.last()?["url"].as_str().map(https)
 }
 
@@ -227,7 +209,7 @@ fn channel(r: &Value) -> Option<ChannelHit> {
 }
 
 /// "3 days ago", "Streamed 2 weeks ago" → seconds.
-fn ago_secs(t: &str) -> Option<i64> {
+pub(super) fn ago_secs(t: &str) -> Option<i64> {
     let words: Vec<&str> = t.split_whitespace().collect();
     let i = words.iter().position(|w| w.chars().all(|c| c.is_ascii_digit()))?;
     let n: i64 = words[i].parse().ok()?;
@@ -246,7 +228,7 @@ fn ago_secs(t: &str) -> Option<i64> {
 }
 
 /// "3,634,811 views" → 3634811; "No views" → 0.
-fn count(t: &str) -> Option<i64> {
+pub(super) fn count(t: &str) -> Option<i64> {
     if t.starts_with("No ") {
         return Some(0);
     }
@@ -255,7 +237,7 @@ fn count(t: &str) -> Option<i64> {
 }
 
 /// "1:02:03" → 3723.
-fn clock_secs(t: &str) -> Option<u32> {
+pub(super) fn clock_secs(t: &str) -> Option<u32> {
     t.trim().split(':').try_fold(0u32, |acc, p| Some(acc * 60 + p.parse::<u32>().ok()?))
 }
 

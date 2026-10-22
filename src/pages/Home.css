@@ -8,21 +8,8 @@
   padding-top: 22px;
 }
 
-.home-empty {
-  max-width: 640px;
-  margin: 12vh auto 0;
-  text-align: center;
-}
-.home-empty h1 {
-  font-size: 28px;
-  margin: 0 0 8px;
-}
-.home-empty p {
-  color: var(--muted);
-  margin: 0 0 22px;
-}
-.home-empty .add-channel {
-  margin: 0 auto;
+.home-start p {
+  margin: 0 0 12px;
 }
 
 .strip {

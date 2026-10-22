@@ -15,6 +15,7 @@ const Algorithm = lazy(() => import("./pages/Algorithm"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Search = lazy(() => import("./pages/Search"));
 const Trending = lazy(() => import("./pages/Trending"));
+const Channel = lazy(() => import("./pages/Channel"));
 
 export default function App() {
   return (
@@ -35,6 +36,7 @@ export default function App() {
                   <Route path="/algorithm" element={<Algorithm />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/watch/:id" element={<Watch />} />
+                  <Route path="/channel/:id" element={<Channel />} />
                 </Routes>
               </Suspense>
             </ScreenBoundary>

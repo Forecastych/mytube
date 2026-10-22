@@ -49,6 +49,8 @@ pub fn run() {
             progress::save_progress,
             progress::progress_list,
             youtube::search::search,
+            youtube::related::related,
+            youtube::channel_page::channel_page,
             feed::commands::algorithm_get,
             feed::commands::algorithm_set,
             feed::commands::blocked_channel_resolve,

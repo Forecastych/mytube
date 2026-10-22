@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Check, LoaderCircle, RotateCw, Star } from "lucide-react";
 import { VideoCard } from "../components/VideoCard";
 import { api, errorText, type SearchChannel, type Video } from "../lib/api";
@@ -176,9 +176,13 @@ function ChannelHit({ c }: { c: SearchChannel }) {
 
   return (
     <div className="search-channel" title={error ?? undefined}>
-      {c.avatar ? <img src={c.avatar} alt="" loading="lazy" decoding="async" /> : <span className="search-avatar" />}
+      <Link to={`/channel/${c.id}`} className="search-channel-link" tabIndex={-1}>
+        {c.avatar ? <img src={c.avatar} alt="" loading="lazy" decoding="async" /> : <span className="search-avatar" />}
+      </Link>
       <div className="search-channel-text">
-        <div className="search-channel-title">{c.title}</div>
+        <Link to={`/channel/${c.id}`} className="search-channel-title">
+          {c.title}
+        </Link>
         <div className="muted small">{[c.handle, c.subscribers].filter(Boolean).join(" · ")}</div>
         {error && <div className="small search-error">{error}</div>}
       </div>

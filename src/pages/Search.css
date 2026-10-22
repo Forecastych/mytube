@@ -22,7 +22,11 @@
   border-radius: var(--radius-card);
   background: var(--surface);
 }
-.search-channel > img,
+.search-channel-link {
+  display: flex;
+  flex: none;
+}
+.search-channel-link > img,
 .search-avatar {
   flex: none;
   width: 56px;
@@ -35,6 +39,7 @@
   min-width: 0;
 }
 .search-channel-title {
+  display: block;
   overflow: hidden;
   font-weight: 600;
   text-overflow: ellipsis;

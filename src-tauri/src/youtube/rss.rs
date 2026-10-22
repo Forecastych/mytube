@@ -1,13 +1,20 @@
 //! Channel RSS: `feeds/videos.xml?channel_id=…`. Free, no auth, last 15 uploads.
 //! YouTube sends `max-age=900` and no ETag, so we cache by TTL instead.
+//!
+//! Shorts count towards those 15: a channel posting a Short a day pushes its
+//! videos out of the feed within two weeks. For such channels the long-form
+//! playlist (`UULF…`, also RSS, also free) brings the videos back.
 
 use quick_xml::escape::resolve_predefined_entity;
 use quick_xml::events::Event;
 use quick_xml::Reader;
+use reqwest::StatusCode;
 use time::format_description::well_known::Rfc3339;
 use time::OffsetDateTime;
 
 use crate::error::{Error, Result};
+
+const FEEDS: &str = "https://www.youtube.com/feeds/videos.xml";
 
 pub struct Entry {
     pub id: String,
@@ -23,14 +30,42 @@ pub struct Feed {
     pub entries: Vec<Entry>,
 }
 
+/// The channel's last 15 uploads, plus its last 15 long videos if Shorts
+/// were among the uploads.
 pub async fn fetch(http: &reqwest::Client, channel_id: &str) -> Result<Feed> {
-    let resp = http
-        // Ids come from our own DB and are validated `UC…` strings: safe to inline.
-        .get(format!("https://www.youtube.com/feeds/videos.xml?channel_id={channel_id}"))
-        .send()
+    // Ids come from our own DB and are validated `UC…` strings: safe to inline.
+    let mut feed = get(http, &format!("{FEEDS}?channel_id={channel_id}"))
         .await?
-        .error_for_status()?;
-    parse(&resp.text().await?)
+        .ok_or_else(|| Error::msg("YouTube has no feed for this channel"))?;
+    if feed.entries.iter().any(|e| e.is_short) {
+        if let Some(rest) = channel_id.strip_prefix("UC") {
+            match get(http, &format!("{FEEDS}?playlist_id=UULF{rest}")).await {
+                Ok(Some(videos)) => merge(&mut feed, videos),
+                // 404: the channel has no long videos at all.
+                Ok(None) => {}
+                // Keep what the main feed gave.
+                Err(e) => eprintln!("rss {channel_id} long videos: {e}"),
+            }
+        }
+    }
+    Ok(feed)
+}
+
+/// `None` on 404.
+async fn get(http: &reqwest::Client, url: &str) -> Result<Option<Feed>> {
+    let resp = http.get(url).send().await?;
+    if resp.status() == StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+    parse(&resp.error_for_status()?.text().await?).map(Some)
+}
+
+fn merge(feed: &mut Feed, more: Feed) {
+    for e in more.entries {
+        if !feed.entries.iter().any(|x| x.id == e.id) {
+            feed.entries.push(e);
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -167,5 +202,14 @@ mod tests {
         assert_eq!(f.entries[1].title, "Fiber <Optics>");
         assert!(!f.entries[1].is_short);
         assert_eq!(f.entries[1].published, 1_791_825_105);
+    }
+
+    #[test]
+    fn merge_keeps_one_copy() {
+        let mut a = parse(SAMPLE).unwrap();
+        let b = parse(&SAMPLE.replace("short1", "vid3")).unwrap();
+        merge(&mut a, b);
+        let ids: Vec<_> = a.entries.iter().map(|e| e.id.as_str()).collect();
+        assert_eq!(ids, ["short1", "vid2", "vid3"]);
     }
 }

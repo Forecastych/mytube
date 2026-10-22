@@ -89,6 +89,15 @@
   font-weight: 600;
   text-transform: uppercase;
 }
+.watch-channel-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+a.watch-channel-link:hover .watch-channel-name {
+  text-decoration: underline;
+}
 .watch-channel-name {
   font-weight: 600;
 }
@@ -197,8 +206,10 @@
   margin: 0;
   font-size: 17px;
 }
-.upnext-note {
-  margin-top: -10px;
+.upnext-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: -6px;
 }
 
 .upnext-item {

@@ -13,7 +13,7 @@ use crate::commands::{refresh_rss, AppState};
 use crate::db::{self, NEW_WINDOW_SECS};
 use crate::error::{Error, Result};
 use crate::google::{self, subscriptions, trending, vault, GoogleState};
-use crate::youtube::{channel, rss};
+use crate::youtube::{channel, related, rss};
 
 const PREVIEW_LEN: usize = 5;
 const HOME_LIMIT: usize = 120;
@@ -25,6 +25,8 @@ const SUB_TTL_SECS: i64 = 60 * 60;
 const SUB_REFRESH: u32 = 24;
 /// Cached favorite uploads the preview ranks: all of them, in practice.
 const PREVIEW_POOL: u32 = 1000;
+/// Related lists Home asks for: each is one Innertube call, cached for an hour.
+const RELATED_SEEDS: usize = 4;
 
 fn now() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
@@ -97,6 +99,18 @@ pub struct HomeFeed {
     notice: Option<String>,
 }
 
+/// Videos whose related lists feed the Related source: the latest favorite
+/// uploads that pass the rules, or subscription uploads without favorites.
+fn related_seeds(conn: &rusqlite::Connection, rules: &Rules, new_since: i64) -> Result<Vec<String>> {
+    for list in [store::favorite_candidates(conn, new_since, 40)?, store::subscription_candidates(conn, new_since, 40)?] {
+        let seeds: Vec<String> = rank::filter(list, rules).videos.into_iter().take(RELATED_SEEDS).map(|c| c.id).collect();
+        if !seeds.is_empty() {
+            return Ok(seeds);
+        }
+    }
+    Ok(Vec::new())
+}
+
 /// The mixed feed under the chips on Home. `source` narrows it to one
 /// source; `region` is the Trending fallback until that screen is opened.
 #[tauri::command]
@@ -134,8 +148,17 @@ pub async fn home_feed(
         }
     }
 
-    let conn = lock(&state)?;
     let new_since = t - NEW_WINDOW_SECS;
+    if wants(Source::Related) && (source.is_some() || rules.mix.related > 0) {
+        let seeds = related_seeds(&*lock(&state)?, &rules, new_since)?;
+        let (videos, failed) = related::for_seeds(&state.http, &seeds).await;
+        if failed > 0 && videos.is_empty() {
+            notice = notice.or(Some("Couldn't load related videos".into()));
+        }
+        pool.extend(videos);
+    }
+
+    let conn = lock(&state)?;
     if wants(Source::Favorites) {
         pool.extend(store::favorite_candidates(&conn, new_since, HOME_POOL)?);
     }

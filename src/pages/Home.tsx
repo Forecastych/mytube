@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { Flame, Inbox, LayoutGrid, RotateCw, Star } from "lucide-react";
+import { Flame, Inbox, LayoutGrid, RotateCw, Sparkles } from "lucide-react";
 import { AddChannel } from "../components/AddChannel";
 import { FavoritesRow } from "../components/FavoritesRow";
 import { VideoCard } from "../components/VideoCard";
@@ -15,7 +15,7 @@ const sources: { id: Source | null; label: string; icon: typeof Inbox }[] = [
   { id: null, label: "All", icon: LayoutGrid },
   { id: "subscriptions", label: "Subscriptions", icon: Inbox },
   { id: "trending", label: "Trending", icon: Flame },
-  { id: "related", label: "Related to favorites", icon: Star },
+  { id: "related", label: "Related", icon: Sparkles },
 ];
 
 export default function Home() {
@@ -23,27 +23,31 @@ export default function Home() {
   const [source, setSource] = useState<Source | null>(null);
   const fresh = useMemo(() => videos.filter((v) => v.isNew).slice(0, NEW_LIMIT), [videos]);
 
-  if (loaded && channels.length === 0) {
-    return (
-      <section className="home-empty">
-        <h1>Start with your favorite channels</h1>
-        <p>New uploads from favorites always sit at the top of Home. Paste a channel link:</p>
-        <AddChannel autoFocus />
-      </section>
-    );
-  }
-
   return (
     <div className="home">
       <section>
         <div className="section-head">
           <h2>Favorites</h2>
           <span className="muted">Your favorite channels</span>
-          <button className="btn btn-ghost section-action" onClick={() => refresh(true)} disabled={loading} title="Refresh">
+          <button
+            className="btn btn-ghost section-action"
+            onClick={() => refresh(true)}
+            disabled={loading}
+            title="Refresh"
+          >
             <RotateCw size={16} className={loading ? "spin" : undefined} />
           </button>
         </div>
-        <FavoritesRow channels={channels} />
+        {loaded && channels.length === 0 ? (
+          <div className="home-start">
+            <p className="muted">
+              New uploads from favorite channels always sit at the top of Home. Paste a channel link:
+            </p>
+            <AddChannel />
+          </div>
+        ) : (
+          <FavoritesRow channels={channels} />
+        )}
         {error && <div className="form-error">{error}</div>}
         {failed.length > 0 && (
           <div className="muted small">
@@ -52,23 +56,29 @@ export default function Home() {
         )}
       </section>
 
-      <section>
-        <div className="section-head">
-          <span className="dot" />
-          <h2 className="accent">NEW</h2>
-          <span className="muted">Latest videos from your favorite channels</span>
-          <Link to="/favorites" className="muted small section-action">All from favorites →</Link>
-        </div>
-        {fresh.length > 0 ? (
-          <div className="strip">
-            {fresh.map((v) => (
-              <VideoCard key={v.id} v={v} badge />
-            ))}
+      {channels.length > 0 && (
+        <section>
+          <div className="section-head">
+            <span className="dot" />
+            <h2 className="accent">NEW</h2>
+            <span className="muted">Latest videos from your favorite channels</span>
+            <Link to="/favorites" className="muted small section-action">
+              All from favorites →
+            </Link>
           </div>
-        ) : (
-          <p className="muted">{loading ? "Checking for new videos…" : "Nothing new this week. You're all caught up."}</p>
-        )}
-      </section>
+          {fresh.length > 0 ? (
+            <div className="strip">
+              {fresh.map((v) => (
+                <VideoCard key={v.id} v={v} badge />
+              ))}
+            </div>
+          ) : (
+            <p className="muted">
+              {loading ? "Checking for new videos…" : "Nothing new this week. You're all caught up."}
+            </p>
+          )}
+        </section>
+      )}
 
       <section>
         <div className="chips">
@@ -96,7 +106,6 @@ function Mixed({ source }: { source: Source | null }) {
   useEffect(() => {
     setFeed(cachedHome(source));
     setError(null);
-    if (source === "related") return;
     setLoading(true);
     homeFeed(source)
       .then((f) => shown.current === source && setFeed(f))
@@ -104,7 +113,6 @@ function Mixed({ source }: { source: Source | null }) {
       .finally(() => shown.current === source && setLoading(false));
   }, [source]);
 
-  if (source === "related") return <p className="muted">Related videos are coming soon.</p>;
   if (error) return <div className="form-error">{error}</div>;
   if (!feed) return <p className="muted">{loading ? "Building your feed…" : ""}</p>;
 
@@ -118,6 +126,11 @@ function Mixed({ source }: { source: Source | null }) {
       {feed.notice && <p className="muted small">{feed.notice}</p>}
       {source === "subscriptions" && !feed.signedIn && feed.subscriptions === 0 && signIn("import your subscriptions")}
       {source === "trending" && !feed.signedIn && signIn("see what's trending")}
+      {source === "related" && (
+        <p className="muted small">
+          Videos like the latest ones from your favorites, or from subscriptions if you have no favorites yet.
+        </p>
+      )}
       {feed.hidden > 0 && (
         <p className="muted small">
           {feed.hidden} hidden by your <Link to="/algorithm">filters</Link>
@@ -130,7 +143,9 @@ function Mixed({ source }: { source: Source | null }) {
           ))}
         </div>
       ) : (
-        !(source === "trending" && !feed.signedIn) && <p className="muted">{loading ? "Loading…" : "Nothing here yet."}</p>
+        !(source === "trending" && !feed.signedIn) && (
+          <p className="muted">{loading ? "Loading…" : "Nothing here yet."}</p>
+        )
       )}
     </>
   );

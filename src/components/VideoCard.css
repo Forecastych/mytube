@@ -1,4 +1,5 @@
 .vcard {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -57,12 +58,20 @@
 }
 
 .vcard-avatar {
+  position: relative;
+  z-index: 1;
   flex: none;
   width: 32px;
   height: 32px;
   border-radius: 50%;
+  overflow: hidden;
   background: var(--surface-2);
+}
+.vcard-avatar img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 .vcard-text {
@@ -77,6 +86,27 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   margin-bottom: 4px;
+}
+/* The whole card opens the video. */
+.vcard-title::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.vcard-title:focus-visible {
+  outline: none;
+}
+.vcard:has(.vcard-title:focus-visible) .vcard-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.vcard-channel {
+  position: relative;
+  z-index: 1;
+}
+.vcard-channel:hover {
+  color: var(--text);
 }
 
 .vcard-meta {

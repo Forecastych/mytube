@@ -15,6 +15,8 @@ export type Prefs = {
   /** SponsorBlock categories skipped without asking. */
   skipCategories: string[];
   upNextOpen: boolean;
+  /** What Up next lists: videos like this one, or new uploads of favorites. */
+  upNextSource: "related" | "favorites";
   theme: Theme;
   /** Same defaults as tokens.css. */
   glassAlpha: number;
@@ -30,6 +32,7 @@ export const defaults: Prefs = {
   sponsorBlock: true,
   skipCategories: ["sponsor", "selfpromo", "interaction"],
   upNextOpen: true,
+  upNextSource: "related",
   theme: "dark",
   glassAlpha: 0.55,
   glassBlur: 18,

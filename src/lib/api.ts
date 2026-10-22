@@ -35,6 +35,28 @@ export type SearchChannel = {
 /** `hidden`: dropped by the Algorithm rules. */
 export type SearchPage = { channels: SearchChannel[]; videos: Video[]; hidden: number; next: string | null };
 
+/** `hidden`: dropped by the Algorithm rules (related) or Shorts left out (channel). */
+export type Related = { videos: Video[]; hidden: number };
+
+export type ChannelPage = {
+  id: string;
+  title: string;
+  avatar: string | null;
+  banner: string | null;
+  /** "@kurzgesagt" */
+  handle: string | null;
+  /** "25.7M subscribers" */
+  subscribers: string | null;
+  /** "394 videos" */
+  videoCount: string | null;
+  description: string | null;
+  videos: Video[];
+  hidden: number;
+  isFavorite: boolean;
+  isSubscribed: boolean;
+  isBlocked: boolean;
+};
+
 export type Track = {
   /** path under `stream://` */
   key: string;
@@ -107,6 +129,9 @@ export const api = {
   commentsMore: (token: string) => invoke<CommentsPage>("comments_more", { token }),
   /** Anonymous Innertube search; `next` continues the same query. */
   search: (query: string, next: string | null = null) => invoke<SearchPage>("search", { query, next }),
+  /** Videos YouTube shows next to this one, through the Algorithm rules. */
+  related: (id: string) => invoke<Related>("related", { id }),
+  channelPage: (id: string) => invoke<ChannelPage>("channel_page", { id }),
   markWatched: (id: string) => invoke<void>("mark_watched", { id }),
   ytdlpVersion: () => invoke<string>("ytdlp_version"),
   /** Runs `yt-dlp -U`; resolves with its last line of output. */
