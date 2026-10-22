@@ -43,6 +43,9 @@ const MIGRATIONS: &[&str] = &[
     );
     ALTER TABLE videos ADD COLUMN duration INTEGER;
     ALTER TABLE videos ADD COLUMN category INTEGER;",
+    // v3: channels imported from the user's YouTube subscriptions. A channel
+    // can be a favorite, a subscription or both; it stays while either holds.
+    "ALTER TABLE channels ADD COLUMN subscribed INTEGER NOT NULL DEFAULT 0;",
 ];
 
 pub fn open(path: &Path) -> Result<Connection> {
@@ -72,19 +75,6 @@ pub struct Channel {
     pub title: String,
     pub avatar: Option<String>,
     pub new_count: u32,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Video {
-    pub id: String,
-    pub channel_id: String,
-    pub channel_title: String,
-    pub channel_avatar: Option<String>,
-    pub title: String,
-    pub published: i64,
-    pub views: Option<i64>,
-    pub is_new: bool,
 }
 
 pub fn favorites(conn: &Connection, now: i64) -> Result<Vec<Channel>> {
@@ -122,8 +112,10 @@ pub fn add_favorite(conn: &Connection, id: &str, title: &str, avatar: Option<&st
 }
 
 pub fn remove_favorite(conn: &Connection, id: &str) -> Result<()> {
-    // Cascades to the channel's cached videos.
-    conn.execute("DELETE FROM channels WHERE id = ?1", [id])?;
+    // A subscription keeps its row and cached videos; otherwise the delete
+    // cascades to the videos.
+    conn.execute("UPDATE channels SET favorite = 0 WHERE id = ?1", [id])?;
+    conn.execute("DELETE FROM channels WHERE id = ?1 AND subscribed = 0", [id])?;
     Ok(())
 }
 
@@ -152,30 +144,6 @@ pub fn store_feed(conn: &mut Connection, channel_id: &str, feed: &Feed, now: i64
     Ok(())
 }
 
-pub fn favorites_feed(conn: &Connection, now: i64, limit: u32) -> Result<Vec<Video>> {
-    let mut stmt = conn.prepare_cached(
-        "SELECT v.id, v.channel_id, c.title, c.avatar, v.title, v.published, v.views,
-                v.published > ?1 AND NOT EXISTS (SELECT 1 FROM watched w WHERE w.video_id = v.id)
-           FROM videos v JOIN channels c ON c.id = v.channel_id
-          WHERE c.favorite = 1 AND v.is_short = 0
-          ORDER BY v.published DESC
-          LIMIT ?2",
-    )?;
-    let rows = stmt.query_map(params![now - NEW_WINDOW_SECS, limit], |r| {
-        Ok(Video {
-            id: r.get(0)?,
-            channel_id: r.get(1)?,
-            channel_title: r.get(2)?,
-            channel_avatar: r.get(3)?,
-            title: r.get(4)?,
-            published: r.get(5)?,
-            views: r.get(6)?,
-            is_new: r.get(7)?,
-        })
-    })?;
-    Ok(rows.collect::<rusqlite::Result<_>>()?)
-}
-
 pub fn mark_watched(conn: &Connection, video_id: &str, now: i64) -> Result<()> {
     conn.execute(
         "INSERT INTO watched (video_id, watched_at) VALUES (?1, ?2)
@@ -183,4 +151,29 @@ pub fn mark_watched(conn: &Connection, video_id: &str, now: i64) -> Result<()> {
         params![video_id, now],
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unfavoriting_keeps_a_subscription() {
+        let c = Connection::open_in_memory().unwrap();
+        migrate(&c).unwrap();
+        c.execute_batch(
+            "INSERT INTO channels (id, title, favorite, subscribed) VALUES ('UCfav', 'F', 1, 0), ('UCboth', 'B', 1, 1);",
+        )
+        .unwrap();
+        remove_favorite(&c, "UCfav").unwrap();
+        remove_favorite(&c, "UCboth").unwrap();
+        let left: Vec<(String, bool)> = c
+            .prepare("SELECT id, favorite FROM channels")
+            .unwrap()
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?)))
+            .unwrap()
+            .collect::<rusqlite::Result<_>>()
+            .unwrap();
+        assert_eq!(left, [("UCboth".to_string(), false)]);
+    }
 }

@@ -20,7 +20,8 @@ export type Video = {
   isNew: boolean;
 };
 
-export type FavoritesFeed = { videos: Video[]; failed: string[] };
+/** `hidden`: dropped by the Algorithm rules. */
+export type FavoritesFeed = { videos: Video[]; hidden: number; failed: string[] };
 
 export type Track = {
   /** path under `stream://` */

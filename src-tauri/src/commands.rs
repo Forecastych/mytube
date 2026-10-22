@@ -6,8 +6,10 @@ use serde::Serialize;
 use tauri::State;
 use tokio::sync::Semaphore;
 
-use crate::db::{self, Channel, Video};
+use crate::db::{self, Channel, NEW_WINDOW_SECS};
 use crate::error::{Error, Result};
+use crate::feed::rank::{self, Candidate};
+use crate::feed::store;
 use crate::player::{self, sidx, sponsorblock, ytdlp, Player, WatchInfo};
 use crate::youtube::{channel, comments, rss};
 
@@ -23,7 +25,9 @@ const RSS_TTL_SECS: i64 = 15 * 60;
 const RSS_MIN_SECS: i64 = 60;
 /// Parallel RSS requests — enough to be quick, few enough not to look like a bot.
 const RSS_PARALLEL: usize = 6;
-const FEED_LIMIT: u32 = 120;
+const FEED_LIMIT: usize = 120;
+/// Cached uploads the rules run over before the feed is cut to `FEED_LIMIT`.
+const FEED_POOL: u32 = 1000;
 
 fn now() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs() as i64).unwrap_or(0)
@@ -64,7 +68,10 @@ pub fn favorite_remove(state: State<'_, AppState>, id: String) -> Result<()> {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FavoritesFeed {
-    videos: Vec<Video>,
+    /// Newest first, after the Algorithm rules.
+    videos: Vec<Candidate>,
+    /// Dropped by the rules.
+    hidden: u32,
     /// Channel ids whose RSS failed this time; their cached videos are still shown.
     failed: Vec<String>,
 }
@@ -101,8 +108,12 @@ pub async fn favorites_feed(state: State<'_, AppState>, force: bool) -> Result<F
         }
     }
 
-    let videos = db::favorites_feed(&*lock(&state)?, t, FEED_LIMIT)?;
-    Ok(FavoritesFeed { videos, failed })
+    let conn = lock(&state)?;
+    let rules = store::load_rules(&conn)?;
+    let pool = store::favorite_candidates(&conn, t - NEW_WINDOW_SECS, FEED_POOL)?;
+    let mut feed = rank::filter(pool, &rules);
+    feed.videos.truncate(FEED_LIMIT);
+    Ok(FavoritesFeed { videos: feed.videos, hidden: feed.hidden, failed })
 }
 
 #[derive(Serialize)]
